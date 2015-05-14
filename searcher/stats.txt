@@ -1,0 +1,5 @@
+Memory usage
+============
+100million 2x64bit records
+std::list 4.5GB
+std::forward_list 3.0 GB
