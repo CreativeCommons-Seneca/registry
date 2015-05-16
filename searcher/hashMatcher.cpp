@@ -23,6 +23,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#include "hashMatcher.h"
+
 #define SOCKET_PATH "/tmp/searcher.sock"
 #define CONNECTION_QUEUE_SIZE 10
 
@@ -117,6 +119,146 @@ void printUsageAndExit()
 }
 
 /**
+ * Get command from client. Valid commands:
+ * 
+ * "match hash_uint64_in_hex max_distance_uint8_in_decimal\n" 
+ * (max length of hash is 0xFFFFFFFFFFFFFFFF, 
+ *  max_distance is a byte, most likely single, maybe double-digits 
+ *  that's a total max of 29 characters including the newline)
+ * Returns newline-separated list of pairs of dbId and distance:
+ * "uint64_in_decimal uint8_in_decimal\n"
+ * 
+ * "add dbId_uint64_in_decimal hash_uint64_in_hex\n"
+ * (max total length 44 characters including the newline)
+ * Returns one of "Inserted OK\n" or "Failed to insert: reason\n"
+ */
+void processCommand(int socket, const char* command)
+{
+    int rc;
+    uint64_t hash;
+    unsigned char maxDistance;
+    uint64_t dbId;
+    
+    // See if this is a match command
+    rc = sscanf(command, "match %" SCNx64 " %hhu\n", &hash, &maxDistance);
+    if (rc == 2)
+    {
+        printf("Will search for %" PRIx64 " (max distance %u)\n", 
+               hash, maxDistance);
+        search(hash, maxDistance);
+        
+        // The results (if any) are all in GBLsearchResults. Send them back
+        // to the client.
+        for (unsigned i = 0; i < GBLsearchResults.size(); i++)
+        {
+            char response[100];
+            unsigned responseLen, numBytesSent;
+            responseLen = sprintf(response, "%" PRIu64 " %u\n", 
+                    GBLsearchResults[i].dbId, GBLsearchResults[i].distance);
+            
+            numBytesSent = send(acceptedSocket, response, responseLen, 
+                                MSG_NOSIGNAL);
+            if (numBytesSent != responseLen)
+            {
+                fprintf(stderr, "Couldn't send response to client\n");
+                break;
+            }
+        }
+    }
+    else // See if this is an add command
+    {
+        rc = sscanf(command, "add %" SCNu64 " %" SCNx64 "\n", &dbId, &hash);
+        if (rc == 2)
+        {
+            printf("Will add %lu 0x%lX\n", dbId, hash);
+            add(dbId, hash);
+        }
+        else
+            fprintf(stderr, "Invalid command received\n");
+    }
+}
+
+/**
+ * Keep reading newline-separated commands from the socket. Then pass each 
+ * command to processCommand().
+ */
+void readCommands(int socket)
+{
+    const int bufferSize = 1024;
+    char buffer[bufferSize + 1]; // more than enough for one command + '\0'
+    int numBytesFilled = 0;
+    int rc;
+    
+    while (true)
+    {
+        rc = recv(socket, buffer + numBytesFilled, 
+                  bufferSize - numBytesFilled, 0);
+        if (rc == 0)
+            break; // connection closed
+        if (rc == -1)
+        {
+            perror("Error reading command from client: ");
+            break;
+        }
+        numBytesFilled += rc;
+        
+        char* lineStart = buffer;
+        char* lineEnd;
+        while ( (lineEnd = (char*)memchr((void*)lineStart, '\n', 
+                                        numBytesFilled - (lineStart - buffer))))
+        {
+            *lineEnd = '\0';
+            processCommand(socket, lineStart);
+            lineStart = lineEnd + 1;
+        }
+        
+        /* Shift buffer down so the unprocessed data is at the start */
+        numBytesFilled -= (lineStart - buffer);
+        memmove(buffer, lineStart, numBytesFilled);
+        
+        if (numBytesFilled == bufferSize)
+        {
+            fprintf(stderr, "Command too long, closing connection.\n");
+            break;
+        }
+    }
+}
+
+/**
+ * Start threads to do the search, and wait for them to finish. Results are in
+ * the global GBLsearchResults
+ */
+void search(uint64_t hash, unsigned char maxDistance)
+{
+    GBLsearchResults.clear();
+    
+    ThreadParam* threadParam = new ThreadParam[GBLnumCores];
+    
+    // Start the search on all threads.
+    for (unsigned i = 0; i < GBLnumCores; i++)
+    {
+        threadParam[i].threadNum = i;
+        threadParam[i].queryHash = hash;
+        threadParam[i].maxDistance = maxDistance;
+        threadParam[i].nodeList = &(GBLnodeLists[i]);
+        int rc = pthread_create(&GBLsearchThreads[i], NULL, 
+                                searchThread, 
+                                (void *)(&threadParam[i]));
+        if (rc != 0)
+        {
+            printf("Error: pthread_create() returned %d\n", rc);
+            exit(2);
+        }
+    }
+    
+    // Wait for all the threads to finish. That should happen at about
+    // the same time because the lists are the same size and the operations
+    // almost always the same length.
+    for (unsigned i = 0; i < GBLnumCores; i++)
+        pthread_join(GBLsearchThreads[i], NULL);
+}
+
+/**
  * Go through a list of Nodes and for each one - do a hamming distance
  * calculation. Put results into the global GBLsearchResults.
  */
@@ -155,40 +297,6 @@ void* searchThread(void* threadParam)
             //((ThreadParam*)threadParam)->threadNum);fflush(NULL);
     
     pthread_exit(NULL);
-}
-
-/**
- * Start threads to do the search, and wait for them to finish. Results are in
- * the global GBLsearchResults
- */
-void search(uint64_t hash, unsigned char maxDistance)
-{
-    GBLsearchResults.clear();
-    
-    ThreadParam* threadParam = new ThreadParam[GBLnumCores];
-    
-    // Start the search on all threads.
-    for (unsigned i = 0; i < GBLnumCores; i++)
-    {
-        threadParam[i].threadNum = i;
-        threadParam[i].queryHash = hash;
-        threadParam[i].maxDistance = maxDistance;
-        threadParam[i].nodeList = &(GBLnodeLists[i]);
-        int rc = pthread_create(&GBLsearchThreads[i], NULL, 
-                                searchThread, 
-                                (void *)(&threadParam[i]));
-        if (rc != 0)
-        {
-            printf("Error: pthread_create() returned %d\n", rc);
-            exit(2);
-        }
-    }
-    
-    // Wait for all the threads to finish. That should happen at about
-    // the same time because the lists are the same size and the operations
-    // almost always the same length.
-    for (unsigned i = 0; i < GBLnumCores; i++)
-        pthread_join(GBLsearchThreads[i], NULL);
 }
 
 int main(int argc, char** argv)
@@ -265,80 +373,10 @@ int main(int argc, char** argv)
                                 (struct sockaddr *)&remoteAddr, &remoteAddrLen);
         if (acceptedSocket == -1)
             continue;
-        printf("Connection established.\n");
+        printf("Connection established, waiting for commands.\n");
         
-        /**
-         * Get command from client. One command per connection. Valid commands:
-         * 
-         * "match hash_uint64_in_hex max_distance_uint8_in_decimal\n" 
-         * (max length of hash is 0xFFFFFFFFFFFFFFFF, 
-         *  max_distance is a byte, most likely single, maybe double-digits 
-         *  that's a total max of 29 characters including the newline)
-         * Returns newline-separated list of pairs of dbId and distance:
-         * "uint64_in_decimal uint8_in_decimal\n"
-         * 
-         * "add dbId_uint64_in_decimal hash_uint64_in_hex\n"
-         * (max total length 44 characters including the newline)
-         * Returns one of "Inserted OK\n" or "Failed to insert: reason\n"
-         */
-        char command[100];
-        int numBytesRead;
-        numBytesRead = recv(acceptedSocket, command, 100, 0);
-        if (numBytesRead == -1)
-        {
-            perror("Error reading command from client: ");
-            close(acceptedSocket);
-            continue;
-        }
-        if (strstr(command, "\n") == NULL)
-        {
-            fprintf(stderr, "Bad command from client\n");
-            close(acceptedSocket);
-            continue;
-        }
-        
-        uint64_t hash;
-        unsigned char maxDistance;
-        uint64_t dbId;
-        
-        // See if this is a match command
-        rc = sscanf(command, "match %" SCNx64 " %hhu\n", &hash, &maxDistance);
-        if (rc == 2)
-        {
-            printf("Will search for %" PRIx64 " (max distance %u)\n", 
-                   hash, maxDistance);
-            search(hash, maxDistance);
-            
-            // The results (if any) are all in GBLsearchResults. Send them back
-            // to the client.
-            for (unsigned i = 0; i < GBLsearchResults.size(); i++)
-            {
-                char response[100];
-                unsigned responseLen, numBytesSent;
-                responseLen = sprintf(response, "%" PRIu64 " %u\n", 
-                        GBLsearchResults[i].dbId, GBLsearchResults[i].distance);
-                
-                numBytesSent = send(acceptedSocket, response, responseLen, 
-                                    MSG_NOSIGNAL);
-                if (numBytesSent != responseLen)
-                {
-                    fprintf(stderr, "Couldn't send response to client\n");
-                    break;
-                }
-            }
-        }
-        else // See if this is an add command
-        {
-            rc = sscanf(command, "add %" SCNu64 " %" SCNx64 "\n", &dbId, &hash);
-            if (rc == 2)
-            {
-                printf("Will add %lu 0x%lX\n", dbId, hash);
-                add(dbId, hash);
-            }
-            else
-                fprintf(stderr, "Invalid command received\n");
-        }
-        
+        readCommands(acceptedSocket);
+        printf("Connection closed.\n");
         close(acceptedSocket);
     }
     // END MAIN loop accepting connections and doing the work
