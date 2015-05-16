@@ -1,3 +1,14 @@
+/*******************************************************************************
+ * hashMatcher.cpp
+ * 
+ * A simple server that stores a giant lot of 64bit hashes in memory (tested 
+ * with 100 million) and lets you find all the entries in that list that have 
+ * a hamming distance less than X compared with the query hash.
+ * 
+ * Author: Andrew Smith
+ * Licence: AGPL v3
+ */
+
 #include <list>
 #include <vector>
 #include <forward_list>
@@ -51,10 +62,10 @@ struct Match
  */
 struct ThreadParam
 {
-    unsigned threadNum;
-    uint64_t queryHash;
-    int maxDistance;
-    std::list<Node>* nodeList;
+    unsigned threadNum;         // Just for debugging
+    uint64_t queryHash;         // My "search string"
+    int maxDistance;            // Threshold for results
+    std::list<Node>* nodeList;  // The list to search in this thread
 };
 
 // This is set as a command-line parameter and is used to configure the
@@ -69,24 +80,26 @@ std::vector<Match> GBLsearchResults;
 // Mutex for the vector above since it's updated from multiple threads
 pthread_mutex_t GBLsearchResultsMutex = PTHREAD_MUTEX_INITIALIZER;
 
-void loadList()
+/**
+ * Add a node to the shortest list (or at least to one that's not the longest)
+ */
+void add(uint64_t hash, uint64_t dbId)
 {
-    // This function doesn't belong here. The sql querying should be in another
-    // process, sending the results into this program via a named pipe.
-    // For now fill the lists up with 100 million random records for testing.
-    unsigned numFakeRecords = 100000000;
-    unsigned numRecordsPerList = numFakeRecords / GBLnumCores;
-    
-    for (unsigned nodeListNum = 0; nodeListNum < GBLnumCores; nodeListNum++)
+    // Look through all the lists. If the second is shorter than the first: add
+    // to that. Else compare second and third, etc. 
+    // If all lists are the same length or (very unlikely) longer lists follow
+    // shorter ones: add to the first list.
+    bool added = false;
+    for (unsigned i = 0; i < GBLnumCores - 1; i++)
     {
-        printf("Loading list #%d... ", nodeListNum);fflush(NULL);
-        for (unsigned recordNum = 0; recordNum < numRecordsPerList; recordNum++)
+        if (GBLnodeLists[i+1].size() < GBLnodeLists[i].size())
         {
-            // Duplicate dbIds are ok for testing here
-            GBLnodeLists[nodeListNum].emplace_front(recordNum, random());
+            GBLnodeLists[i+1].emplace_front(hash, dbId);
+            added = true;
         }
-        printf("done.\n");fflush(NULL);
     }
+    if (!added)
+        GBLnodeLists[0].emplace_front(hash, dbId);
 }
 
 /**
@@ -94,26 +107,32 @@ void loadList()
  */
 void printUsageAndExit()
 {
-    printf("Bad parameters. Usage:\n"
-           "searcher -c NUM_CORES\n");
+    printf("Bad parameters. Usage:\n\n"
+           "searcher -c NUM_CORES\n\n"
+           "Then connect to the socket %s and send a 'match' or 'add' command\n"
+           "(one command per connection)\n\n"
+           "match hash_uint64_in_hex max_distance_uint8_in_decimal\n"
+           "add dbId_uint64_in_decimal hash_uint64_in_hex\n", SOCKET_PATH);
     exit(1);
 }
 
 /**
  * Go through a list of Nodes and for each one - do a hamming distance
- * calculation.
+ * calculation. Put results into the global GBLsearchResults.
  */
-void* search(void* threadParam)
+void* searchThread(void* threadParam)
 {
-    unsigned threadNum = ((ThreadParam*)threadParam)->threadNum;
+    //unsigned threadNum = ;
     uint64_t queryHash = ((ThreadParam*)threadParam)->queryHash;
     int maxDistance = ((ThreadParam*)threadParam)->maxDistance;
     std::list<Node>* nodeList = ((ThreadParam*)threadParam)->nodeList;
     
-    printf("Thread number %d is now working\n", threadNum);fflush(NULL);
+    //printf("Thread number %d is now working\n", 
+             //((ThreadParam*)threadParam)->threadNum);fflush(NULL);
     
     // BEGIN PERFORMANCE-CRITICAL SECTION
-    for (std::list<Node>::iterator it = nodeList->begin(); it != nodeList->end(); it++)
+    for (std::list<Node>::iterator it = nodeList->begin(); 
+         it != nodeList->end(); it++)
     {
         // The next two lines are the ones that need to be optimised
         uint64_t bitsToCount = queryHash ^ it->pHash;
@@ -126,14 +145,50 @@ void* search(void* threadParam)
             
             pthread_mutex_lock(&GBLsearchResultsMutex);
             GBLsearchResults.emplace_back(it->dbId, distance);
+            //!! Set a limit on the number of results and check it here (so I don't run out of memory, etc)
             pthread_mutex_unlock(&GBLsearchResultsMutex);
         }
     }
     // END PERFORMANCE-CRITICAL SECTION
     
-    printf("Thread number %d is done\n", threadNum);fflush(NULL);
+    //printf("Thread number %d is done\n", 
+            //((ThreadParam*)threadParam)->threadNum);fflush(NULL);
     
     pthread_exit(NULL);
+}
+
+/**
+ * Start threads to do the search, and wait for them to finish. Results are in
+ * the global GBLsearchResults
+ */
+void search(uint64_t hash, unsigned char maxDistance)
+{
+    GBLsearchResults.clear();
+    
+    ThreadParam* threadParam = new ThreadParam[GBLnumCores];
+    
+    // Start the search on all threads.
+    for (unsigned i = 0; i < GBLnumCores; i++)
+    {
+        threadParam[i].threadNum = i;
+        threadParam[i].queryHash = hash;
+        threadParam[i].maxDistance = maxDistance;
+        threadParam[i].nodeList = &(GBLnodeLists[i]);
+        int rc = pthread_create(&GBLsearchThreads[i], NULL, 
+                                searchThread, 
+                                (void *)(&threadParam[i]));
+        if (rc != 0)
+        {
+            printf("Error: pthread_create() returned %d\n", rc);
+            exit(2);
+        }
+    }
+    
+    // Wait for all the threads to finish. That should happen at about
+    // the same time because the lists are the same size and the operations
+    // almost always the same length.
+    for (unsigned i = 0; i < GBLnumCores; i++)
+        pthread_join(GBLsearchThreads[i], NULL);
 }
 
 int main(int argc, char** argv)
@@ -141,10 +196,8 @@ int main(int argc, char** argv)
     int c;
     int rc;
     
-    //!! used for debugging, delete it
-    srand(time(NULL));
-    
     // Parse arguments to figure out how many threads to have
+    bool paramsOk = false;
     while ((c = getopt (argc, argv, "c:")) != -1)
     {
         if (c == 'c')
@@ -153,19 +206,20 @@ int main(int argc, char** argv)
             rc = sscanf(optarg, "%d", &GBLnumCores);
             if (rc != 1 || GBLnumCores < 1)
                 printUsageAndExit();
+            else
+                paramsOk = true;
         }
         else if (c == '?')
             printUsageAndExit();
     }
+    if (!paramsOk)
+        printUsageAndExit();
     
     // Allocate the array of lists, one list per core
     GBLnodeLists = new std::list<Node>[GBLnumCores];
     
     // Allocate the array of threads for searching, one thread per core
     GBLsearchThreads = new pthread_t[GBLnumCores];
-    
-    // Load fake values
-    loadList();
     
     // BEGIN set up listening socket
     int listeningSocket;
@@ -205,20 +259,27 @@ int main(int argc, char** argv)
         struct sockaddr_un remoteAddr;
         socklen_t remoteAddrLen;
         
-        // Wait for a connection
+        printf("Waiting for a connection.\n");
         remoteAddrLen = sizeof(remoteAddr);
         acceptedSocket = accept(listeningSocket, 
                                 (struct sockaddr *)&remoteAddr, &remoteAddrLen);
         if (acceptedSocket == -1)
             continue;
+        printf("Connection established.\n");
         
         /**
          * Get command from client. One command per connection. Valid commands:
          * 
-         * "match uint64_in_hex\n" (max 0xFFFFFFFFFFFFFFFF, that's a total of
-         *                          25 characters including the newline)
+         * "match hash_uint64_in_hex max_distance_uint8_in_decimal\n" 
+         * (max length of hash is 0xFFFFFFFFFFFFFFFF, 
+         *  max_distance is a byte, most likely single, maybe double-digits 
+         *  that's a total max of 29 characters including the newline)
          * Returns newline-separated list of pairs of dbId and distance:
          * "uint64_in_decimal uint8_in_decimal\n"
+         * 
+         * "add dbId_uint64_in_decimal hash_uint64_in_hex\n"
+         * (max total length 44 characters including the newline)
+         * Returns one of "Inserted OK\n" or "Failed to insert: reason\n"
          */
         char command[100];
         int numBytesRead;
@@ -229,7 +290,7 @@ int main(int argc, char** argv)
             close(acceptedSocket);
             continue;
         }
-        if (numBytesRead > 25 || strstr(command, "\n") == NULL)
+        if (strstr(command, "\n") == NULL)
         {
             fprintf(stderr, "Bad command from client\n");
             close(acceptedSocket);
@@ -237,38 +298,19 @@ int main(int argc, char** argv)
         }
         
         uint64_t hash;
+        unsigned char maxDistance;
+        uint64_t dbId;
         
         // See if this is a match command
-        rc = sscanf(command, "match %" SCNx64 "\n", &hash);
-        if (rc == 1)
+        rc = sscanf(command, "match %" SCNx64 " %hhu\n", &hash, &maxDistance);
+        if (rc == 2)
         {
-            printf("Will search for %" PRIx64 "\n", hash);
-            GBLsearchResults.clear();
+            printf("Will search for %" PRIx64 " (max distance %u)\n", 
+                   hash, maxDistance);
+            search(hash, maxDistance);
             
-            ThreadParam* threadParam = new ThreadParam[GBLnumCores];
-            
-            // Start the search on all threads.
-            for (unsigned i = 0; i < GBLnumCores; i++)
-            {
-                threadParam[i].threadNum = i;
-                threadParam[i].queryHash = hash;
-                threadParam[i].maxDistance = 4;
-                threadParam[i].nodeList = &(GBLnodeLists[i]);
-                int rc = pthread_create(&GBLsearchThreads[i], NULL, search, 
-                                        (void *)(&threadParam[i]));
-                if (rc != 0)
-                {
-                    printf("Error: pthread_create() returned %d\n", rc);
-                    exit(2);
-                }
-            }
-            
-            // Wait for all the threads to finish. That should happen at about
-            // the same time.
-            for (unsigned i = 0; i < GBLnumCores; i++)
-                pthread_join(GBLsearchThreads[i], NULL);
-            
-            // The results (if any) are all in GBLsearchResults. Send them back.
+            // The results (if any) are all in GBLsearchResults. Send them back
+            // to the client.
             for (unsigned i = 0; i < GBLsearchResults.size(); i++)
             {
                 char response[100];
@@ -276,14 +318,26 @@ int main(int argc, char** argv)
                 responseLen = sprintf(response, "%" PRIu64 " %u\n", 
                         GBLsearchResults[i].dbId, GBLsearchResults[i].distance);
                 
-                numBytesSent = send(acceptedSocket, response, responseLen, MSG_NOSIGNAL);
+                numBytesSent = send(acceptedSocket, response, responseLen, 
+                                    MSG_NOSIGNAL);
                 if (numBytesSent != responseLen)
                 {
                     fprintf(stderr, "Couldn't send response to client\n");
                     break;
                 }
             }
-        } // if match command
+        }
+        else // See if this is an add command
+        {
+            rc = sscanf(command, "add %" SCNu64 " %" SCNx64 "\n", &dbId, &hash);
+            if (rc == 2)
+            {
+                printf("Will add %lu 0x%lX\n", dbId, hash);
+                add(dbId, hash);
+            }
+            else
+                fprintf(stderr, "Invalid command received\n");
+        }
         
         close(acceptedSocket);
     }
