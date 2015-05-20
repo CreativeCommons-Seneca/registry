@@ -1,3 +1,5 @@
+// See hashMatcher.cpp for comments
+
 #ifndef hashMatcher_h
 #define hashMatcher_h
 

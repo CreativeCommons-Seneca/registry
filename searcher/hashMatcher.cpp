@@ -119,7 +119,7 @@ void printUsageAndExit()
 }
 
 /**
- * Get command from client. Valid commands:
+ * Run command from client. Valid commands:
  * 
  * "match hash_uint64_in_hex max_distance_uint8_in_decimal\n" 
  * (max length of hash is 0xFFFFFFFFFFFFFFFF, 
@@ -360,7 +360,7 @@ int main(int argc, char** argv)
     }
     // END set up listening socket
     
-    // BEGIN MAIN loop accepting connections and doing the work
+    // Main loop accepting connections and doing the work
     while (true)
     {
         int acceptedSocket;
@@ -379,7 +379,6 @@ int main(int argc, char** argv)
         printf("Connection closed.\n");
         close(acceptedSocket);
     }
-    // END MAIN loop accepting connections and doing the work
     
     return 0;
 }
