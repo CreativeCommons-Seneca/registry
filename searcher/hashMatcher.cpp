@@ -22,6 +22,7 @@
 #include <inttypes.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/time.h>
 
 #include "hashMatcher.h"
 
@@ -67,14 +68,16 @@ struct ThreadParam
     unsigned threadNum;         // Just for debugging
     uint64_t queryHash;         // My "search string"
     int maxDistance;            // Threshold for results
-    std::list<Node>* nodeList;  // The list to search in this thread
+    std::forward_list<Node>* nodeList;  // The list to search in this thread
 };
 
 // This is set as a command-line parameter and is used to configure the
 // number of search threads (and associated things).
 unsigned GBLnumCores;
 // Array of lists of nodes to search. One list per thread for efficiency.
-std::list<Node>* GBLnodeLists;
+std::forward_list<Node>* GBLnodeLists;
+// And the size of each of the lists above, for constant-time querying
+int* GBLnodeListSizes;
 // Array of threads to do the searching of the lists above.
 pthread_t* GBLsearchThreads;
 // Search results
@@ -92,16 +95,20 @@ void add(uint64_t hash, uint64_t dbId)
     // If all lists are the same length or (very unlikely) longer lists follow
     // shorter ones: add to the first list.
     bool added = false;
-    for (unsigned i = 0; i < GBLnumCores - 1; i++)
+    for (unsigned i = 0; i < GBLnumCores - 1 && !added; i++)
     {
-        if (GBLnodeLists[i+1].size() < GBLnodeLists[i].size())
+        if (GBLnodeListSizes[i+1] < GBLnodeListSizes[i])
         {
             GBLnodeLists[i+1].emplace_front(hash, dbId);
+            GBLnodeListSizes[i+1] += 1;
             added = true;
         }
     }
     if (!added)
+    {
         GBLnodeLists[0].emplace_front(hash, dbId);
+        GBLnodeListSizes[0] += 1;
+    }
 }
 
 /**
@@ -156,7 +163,7 @@ void processCommand(int socket, const char* command)
             responseLen = sprintf(response, "%" PRIu64 " %u\n", 
                     GBLsearchResults[i].dbId, GBLsearchResults[i].distance);
             
-            numBytesSent = send(acceptedSocket, response, responseLen, 
+            numBytesSent = send(socket, response, responseLen, 
                                 MSG_NOSIGNAL);
             if (numBytesSent != responseLen)
             {
@@ -267,13 +274,13 @@ void* searchThread(void* threadParam)
     //unsigned threadNum = ;
     uint64_t queryHash = ((ThreadParam*)threadParam)->queryHash;
     int maxDistance = ((ThreadParam*)threadParam)->maxDistance;
-    std::list<Node>* nodeList = ((ThreadParam*)threadParam)->nodeList;
+    std::forward_list<Node>* nodeList = ((ThreadParam*)threadParam)->nodeList;
     
     //printf("Thread number %d is now working\n", 
              //((ThreadParam*)threadParam)->threadNum);fflush(NULL);
     
     // BEGIN PERFORMANCE-CRITICAL SECTION
-    for (std::list<Node>::iterator it = nodeList->begin(); 
+    for (std::forward_list<Node>::iterator it = nodeList->begin(); 
          it != nodeList->end(); it++)
     {
         // The next two lines are the ones that need to be optimised
@@ -324,10 +331,34 @@ int main(int argc, char** argv)
         printUsageAndExit();
     
     // Allocate the array of lists, one list per core
-    GBLnodeLists = new std::list<Node>[GBLnumCores];
+    GBLnodeLists = new std::forward_list<Node>[GBLnumCores];
+    
+    // Initialize the linked list size counters
+    GBLnodeListSizes = new int[GBLnumCores];
+    for (unsigned i = 0; i < GBLnumCores; i++)
+        GBLnodeListSizes[i] = 0;
     
     // Allocate the array of threads for searching, one thread per core
     GBLsearchThreads = new pthread_t[GBLnumCores];
+    
+    //// Insert a hundred million random records for debugging purposes
+    //printf("Loading random data... \n");fflush(NULL);
+    //int numNodes = 100000000;
+    //for (int i = 0; i < numNodes; i++)
+        //add(i, random());
+    //printf("Loaded:\n");
+    //for (unsigned i = 0; i < GBLnumCores; i++)
+        //printf("  List %d: %d nodes\n", i, GBLnodeListSizes[i]);
+    
+    //// Do a thousand searches for performance testing
+    //int numSearches = 10;
+    //struct timeval tv1, tv2;
+    //gettimeofday(&tv1, NULL);
+    //for (int i = 0; i < numSearches; i++)
+        //search(12345, 4);
+    //gettimeofday(&tv2, NULL);
+    //printf("%d searches took %ld.%03ld seconds\n", numSearches,
+           //tv2.tv_sec - tv1.tv_sec, tv2.tv_usec - tv1.tv_usec);
     
     // BEGIN set up listening socket
     int listeningSocket;
