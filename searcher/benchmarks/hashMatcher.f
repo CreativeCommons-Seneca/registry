@@ -1,3 +1,7 @@
+! Test program to see how fortran compares to C
+! Output is in nanoseconds (divide by 1000000 to get milliseconds)
+! Before running set the stack size to unlimited like this:
+! ulimit -s unlimited
 	program test_population
 		use omp_lib
 		integer*8 :: count, count_rate, count_max
