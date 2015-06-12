@@ -1,16 +1,25 @@
 # images-flickr
-getImages-Flickr
+
+#Image Downloader in PHP - flickr.php
+To run use command line:
+
+    $ php flickr.php 2015-03-20
+    
+It will download all the images from Flickr uploaded on the specified date, with all the applicable CC Licenses.  Uses phpFlickr.php API -  https://github.com/dan-coulter/phpflickr
+
+#Image Downloader in Python - getimages.py
+
 
 The program will download the images to the pwd, and will write the downloaded photo's credit url to the urllist.txt file, and if any fail to download the photo url will be written to failed.txt
 
-To run getImagesByDate.py
+To run getimages.py
 
-    $ python getImagesByDate.py 2 2015-03-20
+    $ python getimages.py 2 2015-03-20
 
 The program will get all the images with License 2 uploaded on 2015-03-20
 You may specify multiple Licenses 
 
-    $ python getImagesByDate.py 1,2,3 2015-03-20 
+    $ python getimages.py 1,2,3 2015-03-20 
 
 The list of Licenses from FLickr - available when using the api call flickr.photos.licenses.getInfo
 
