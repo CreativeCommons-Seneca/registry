@@ -1,4 +1,3 @@
-# images-flickr
 
 #Image Downloader in PHP - flickr.php
 To run use command line:
