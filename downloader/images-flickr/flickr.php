@@ -1,4 +1,8 @@
 <?php
+// Program that will download Flickr Images and Store them in your database based on Date
+// By Anna Fatsevych
+// June 11, 2015
+// Uses phpFlickr Flickr API for PHP
 $date = NULL;
 foreach ($argv as $arg) {
     $e=explode("=",$arg);
