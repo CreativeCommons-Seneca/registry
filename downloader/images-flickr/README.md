@@ -1,8 +1,10 @@
 
 #Image Downloader in PHP - flickr.php
+
+Put all the files from the phpFlickr folder in the same directory.
 To run use command line:
 
-    $ php flickr.php 2015-03-20
+    $ php flickr.php 2015-03-20 2015-04-20
     
 It will download all the images from Flickr uploaded on the specified date, with all the applicable CC Licenses.  Uses phpFlickr.php API -  https://github.com/dan-coulter/phpflickr
 
