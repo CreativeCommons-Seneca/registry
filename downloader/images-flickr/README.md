@@ -1,12 +1,14 @@
 
 #Image Downloader in PHP - flickr.php
 
-Put all the files from the phpFlickr folder in the same directory.
+Put all the files from the phpflickr-master folder in the same directory.
 To run use command line:
 
     $ php flickr.php 2015-03-20 2015-04-20
     
 It will download all the images from Flickr uploaded on the specified date, with all the applicable CC Licenses.  Uses phpFlickr.php API -  https://github.com/dan-coulter/phpflickr
+
+A new sqLite database will be created, aswell as the text file with all the information about downloaded images.
 
 #Image Downloader in Python - getimages.py
 
