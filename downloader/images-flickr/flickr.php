@@ -1,8 +1,6 @@
 <?php
 
-// Flickr PHP Image Downloader
-// By Anna Fatsevych uses phpFlickr.php
-// Downloads Commons images for the range of provided dates. 
+// Flickr API 
 require_once("phpFlickr.php");
 
 $date = NULL;
@@ -49,7 +47,7 @@ $myfile = fopen($date."-".$date2."_flickrdownload.txt", "w") or die("Unable to o
 $errorfile = fopen($date."-".$date2."_flickrerrors.txt", "w") or die("Unable to open errorfile file!");
 
 //Flickr File
-$f = new phpFlickr("dd5266efb4a0e67238c32f8b8cfa2f92");
+$f = new phpFlickr("API_KEY");
 $dir = $date."-".$date2."_pics";
 mkdir($dir);
 
@@ -63,7 +61,10 @@ while (strtotime($date) <= strtotime($date2)) {
     echo "\nTOTAL: ".$photos['total'];
     echo "\nPAGES: ".$photos['pages'];
     $pages = $photos['pages'];
+
+
     
+    print_r($photos);
 
     for($page=1; $page <= $pages; $page++){
       $counter = 0;
@@ -71,21 +72,28 @@ while (strtotime($date) <= strtotime($date2)) {
       $photos = $f->photos_search(array("min_upload_date"=>$date, "max_upload_date"=>$date,"page"=>$page,"per_page"=>"500","license"=>"1,2,3,4,5,6", "extras"=>"url_o,owner_name, license"));
       
       foreach ($photos['photo'] as $photo) {
-        $filename = $dir."/".$photo['owner'].$photo['id'];
+
         $url = $photo['url_o'];
+        $namefile = explode("/",$url);
+        $filename = $dir."/".$namefile[4];
+        
 
         try{
           file_put_contents($filename, file_get_contents($url));
-        }catch (Exception $e){
-          echo "\n\n DOWNLOAD ERROR: ".$e."\n\n";
-        }
-        try{
-          $str = 'convert '.$filename.' -resize 200 '.$filename;
-          $thumb = exec($str);
-        }
-        catch (Exception $e){
-          echo "\n\n RESIZE ERROR!  ".$e."\n\n";
-        }
+
+            /*
+            try{
+              $str = 'convert '.$filename.' -resize 200 '.$filename;
+              $thumb = exec($str);
+            }
+            catch (Exception $e){
+              echo "\n\n RESIZE ERROR!  ".$e."\n\n";
+            }
+            */
+echo "\n\nURL:  *********\n".$url;
+
+
+
         try{
           $hash = exec('./phash '.$filename);
 
@@ -126,22 +134,32 @@ while (strtotime($date) <= strtotime($date2)) {
         $authorname = $photo['ownername'];
         $title = $photo['title'];
 
+        }catch (Exception $e){
+          echo "\n\n DOWNLOAD ERROR: ".$e."\n\n";
+        }
+
+
         if(empty($hash) || empty($license) || empty($photograph) || empty($title)
           || empty($authorname) || empty($url) || empty($mhash)){
 
           $errorname = (empty($photos))? "No RESPONSE" : "";
  
-          $errorname = "page: ".$page." date: ".$date."\n";
+          $errorname = "page: ".$page." date: ".$date." ".$counter;
+          $errorname.= (empty($photograph)) ? " no PHOTO" : ""; 
+          $errorname.=(empty($url)) ? " " : $url;
           fwrite($errorfile, $errorname);
           $errorcount++;    
       }else{
+        $sqlite_timestamp = date(DATE_RFC3339);
+
+        $del = '\'.\'';
+        $str = $hash.$del.$license.$del.$title.$del.$authorname.$del.$url.$del.$sqlite_timestamp.$del.$filename."\n";
+        fwrite($myfile, $str);
 
         $db = new MyDB($date, $date2);
         if(!$db){
           echo $db->lastErrorMsg();
-        } else {
-          echo "Opened database successfully\n";
-        }
+        } 
 
         $sql =<<<EOF
         CREATE TABLE IF NOT EXISTS IMG (
@@ -157,45 +175,54 @@ while (strtotime($date) <= strtotime($date2)) {
           mhash VARCHAR(75));
 EOF;
 
-        $ret = $db->exec($sql);
-        if(!$ret){
-          echo $db->lastErrorMsg();
-        } else {
-          echo "Table created successfully\n";
-        }
+    $ret = $db->exec($sql);
+    if(!$ret){
+      echo $db->lastErrorMsg();
+    }
 
-                // Prepare INSERT statement to SQLite3 file db
-        $insert = "INSERT INTO IMG (phash, license, image,imagename,  url, mhash, local, dateuploaded, timestamp) 
-        VALUES (:phash, :license, :photograph, :imagename, :url, :mhash, :filename, :dateuploaded, :timestamp)";
+            // Prepare INSERT statement to SQLite3 file db
+    $insert = "INSERT INTO IMG (phash, license, image,imagename,  url, mhash, local, dateuploaded, timestamp) 
+    VALUES (:phash, :license, :photograph, :imagename, :url, :mhash, :filename, :dateuploaded, :timestamp)";
 
-        $stmt = $db->prepare($insert);
-        $sqlite_timestamp = date(DATE_RFC3339);
+    $stmt = $db->prepare($insert);
 
-        // Bind parameters to statement variables
-        $stmt->bindParam(':phash', $hash);
-        $stmt->bindParam(':license', $license);
-        $stmt->bindParam(':imagename', $title);
-        $stmt->bindParam(':photograph', $photograph);
-        $stmt->bindParam(':url', $url);
-        $stmt->bindParam(':mhash', $mhash);
-        $stmt->bindParam(':filename', $filename);
-        $stmt->bindParam(':dateuploaded', $date);
-        $stmt->bindParam(':timestamp', $sqlite_timestamp);
+    
 
-        // Execute statement
-        $stmt->execute();
+            // Bind parameters to statement variables
+    $stmt->bindParam(':phash', $hash);
+    $stmt->bindParam(':license', $license);
+    $stmt->bindParam(':imagename', $title);
+    $stmt->bindParam(':photograph', $photograph);
+    $stmt->bindParam(':url', $url);
+    $stmt->bindParam(':mhash', $mhash);
+    $stmt->bindParam(':filename', $filename);
+    $stmt->bindParam(':dateuploaded', $date);
+    $stmt->bindParam(':timestamp', $sqlite_timestamp);
+
+
+
+
+             // Execute statement
+    $stmt->execute();
+
     }
 
     $counter++;
+    echo "\n ** COUNTER: ".$counter;
+
     } // close foreach photo
   }
+
 
   } catch (Exception $e){
     echo "\n Connection error\n";
   }
   $db->close();
-  fclose($myfile);
-  fclose($errorfile);
+
+   
+
   $date = date ("Y-m-d", strtotime("+1 day", strtotime($date)));
  }
+   fclose($myfile);
+  fclose($errorfile);
 ?>
