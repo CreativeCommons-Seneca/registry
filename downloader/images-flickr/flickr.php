@@ -1,7 +1,7 @@
 <?php
 
 // Flickr API 
-require_once("phpFlickr.php");
+require_once("phpflickr-master/phpFlickr.php");
 
 $date = NULL;
 
@@ -47,7 +47,7 @@ $myfile = fopen($date."-".$date2."_flickrdownload.txt", "w") or die("Unable to o
 $errorfile = fopen($date."-".$date2."_flickrerrors.txt", "w") or die("Unable to open errorfile file!");
 
 //Flickr File
-$f = new phpFlickr("API_KEY");
+$f = new phpFlickr("dd5266efb4a0e67238c32f8b8cfa2f92");
 $dir = $date."-".$date2."_pics";
 mkdir($dir);
 
