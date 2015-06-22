@@ -42,6 +42,7 @@ $license7 = "CC-Zero";
 
 $errorcount=0;
 $errorname = "";
+$del = '\',\'';
 // Files
 $myfile = fopen($date."-".$date2."_flickrdownload.txt", "w") or die("Unable to open file!");
 $errorfile = fopen($date."-".$date2."_flickrerrors.txt", "w") or die("Unable to open errorfile file!");
@@ -61,10 +62,7 @@ while (strtotime($date) <= strtotime($date2)) {
     echo "\nTOTAL: ".$photos['total'];
     echo "\nPAGES: ".$photos['pages'];
     $pages = $photos['pages'];
-
-
-    
-    print_r($photos);
+    //print_r($photos);
 
     for($page=1; $page <= $pages; $page++){
       $counter = 0;
@@ -76,83 +74,82 @@ while (strtotime($date) <= strtotime($date2)) {
         $url = $photo['url_o'];
         $namefile = explode("/",$url);
         $filename = $dir."/".$namefile[4];
-        
 
         try{
-          file_put_contents($filename, file_get_contents($url));
+          //file_put_contents($filename, file_get_contents($url));
+          $ch = curl_init($url);
+          curl_setopt($ch, CURLOPT_HEADER, 0);
+          curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+          curl_setopt($ch, CURLOPT_BINARYTRANSFER,1);
+          $rawdata=curl_exec ($ch);
+          curl_close ($ch);
 
-            /*
-            try{
-              $str = 'convert '.$filename.' -resize 200 '.$filename;
-              $thumb = exec($str);
-            }
-            catch (Exception $e){
-              echo "\n\n RESIZE ERROR!  ".$e."\n\n";
-            }
-            */
-echo "\n\nURL:  *********\n".$url;
+          $fp = fopen($filename,'w');
+          fwrite($fp, $rawdata); 
+          fclose($fp);
+          echo "\n\nURL:  *********\n".$url;
 
+          try{
+            $hash = exec('./phash '.$filename);
 
+          }catch (Exception $e) {
+            echo "\n\n HASH ERROR: ".$e."\n\n";
+          }
+          try{
+            $mhash = exec('./phashmh '.$filename);
+          }
+          catch (Exception $e){
+            echo "\n\n MPH HASH EXCEPTION!!! ".$e."\n\n";
+          }
 
-        try{
-          $hash = exec('./phash '.$filename);
-
-        }catch (Exception $e) {
-          echo "\n\n HASH ERROR: ".$e."\n\n";
-        }
-        try{
-          $mhash = exec('./phashmh '.$filename);
-        }
-        catch (Exception $e){
-          echo "\n\n MPH HASH EXCEPTION!!! ".$e."\n\n";
-        }
-
-        $license = $photo['license'];
-        switch ($photo['license']) {
-          case "1":
-          $license = $license1;
-          break;
-          case "2":
-          $license = $license2;
-          break;
-          case "3":
-          $license = $license3;
-          break;
-          case "4":
-          $license = $license4;
-          break;
-          case "5":
-          $license = $license5;
-          break;
-          case "6":
-          $license = $license6;
-          break;
-          default:
-          echo $license;
-        }
-        $photograph = file_get_contents($filename);
-        $authorname = $photo['ownername'];
-        $title = $photo['title'];
+          $license = $photo['license'];
+          switch ($photo['license']) {
+            case "1":
+            $license = $license1;
+            break;
+            case "2":
+            $license = $license2;
+            break;
+            case "3":
+            $license = $license3;
+            break;
+            case "4":
+            $license = $license4;
+            break;
+            case "5":
+            $license = $license5;
+            break;
+            case "6":
+            $license = $license6;
+            break;
+            default:
+            echo $license;
+          }
+          $photograph = file_get_contents($filename);
+          $authorname = $photo['ownername'];
+          $title = (empty($photo['title'])) ? "No Title" : $photo['title'];
 
         }catch (Exception $e){
           echo "\n\n DOWNLOAD ERROR: ".$e."\n\n";
         }
-
-
+        //Check for empty fields
         if(empty($hash) || empty($license) || empty($photograph) || empty($title)
           || empty($authorname) || empty($url) || empty($mhash)){
 
           $errorname = (empty($photos))? "No RESPONSE" : "";
  
-          $errorname = "page: ".$page." date: ".$date." ".$counter;
+          $errorname = "page: ".$del.$page." date: ".$del.$date.$del." ".$counter;
           $errorname.= (empty($photograph)) ? " no PHOTO" : ""; 
-          $errorname.=(empty($url)) ? " " : $url;
+          $errorname.= (empty($hash)) ? " no HASH" : ""; 
+          $errorname.= (empty($title)) ? " no TITLE" : ""; 
+          $errorname.=(empty($url)) ? "NO URL" : $url;
+          $errorname.="ID: ".$photo['id'];
           fwrite($errorfile, $errorname);
           $errorcount++;    
       }else{
         $sqlite_timestamp = date(DATE_RFC3339);
 
-        $del = '\'.\'';
+
         $str = $hash.$del.$license.$del.$title.$del.$authorname.$del.$url.$del.$sqlite_timestamp.$del.$filename."\n";
         fwrite($myfile, $str);
 
@@ -199,10 +196,7 @@ EOF;
     $stmt->bindParam(':dateuploaded', $date);
     $stmt->bindParam(':timestamp', $sqlite_timestamp);
 
-
-
-
-             // Execute statement
+    // Execute statement
     $stmt->execute();
 
     }
@@ -218,11 +212,8 @@ EOF;
     echo "\n Connection error\n";
   }
   $db->close();
-
-   
-
   $date = date ("Y-m-d", strtotime("+1 day", strtotime($date)));
  }
-   fclose($myfile);
+  fclose($myfile);
   fclose($errorfile);
 ?>
