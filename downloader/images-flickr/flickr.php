@@ -62,7 +62,7 @@ while (strtotime($date) <= strtotime($date2)) {
     echo "\nTOTAL: ".$photos['total'];
     echo "\nPAGES: ".$photos['pages'];
     $pages = $photos['pages'];
-    //print_r($photos);
+    print_r($photos);
 
     for($page=1; $page <= $pages; $page++){
       $counter = 0;
@@ -74,6 +74,7 @@ while (strtotime($date) <= strtotime($date2)) {
         $url = $photo['url_o'];
         $namefile = explode("/",$url);
         $filename = $dir."/".$namefile[4];
+        $crediturl = "https://www.flickr.com/photos/".$photo['owner']."/".$photo['id'];
 
         try{
           //file_put_contents($filename, file_get_contents($url));
@@ -150,7 +151,8 @@ while (strtotime($date) <= strtotime($date2)) {
         $sqlite_timestamp = date(DATE_RFC3339);
 
 
-        $str = $hash.$del.$license.$del.$title.$del.$authorname.$del.$url.$del.$sqlite_timestamp.$del.$filename."\n";
+        $str = $hash.$del.$license.$del.$title.$del.$authorname.$del.$url.$del.$sqlite_timestamp.$del.$filename.$del.$crediturl."\n";
+    
         fwrite($myfile, $str);
 
         $db = new MyDB($date, $date2);
@@ -169,7 +171,8 @@ while (strtotime($date) <= strtotime($date2)) {
           local VARCHAR(1024),
           dateuploaded DATE,
           timestamp DATE,
-          mhash VARCHAR(75));
+          mhash VARCHAR(75),
+          crediturl VARCHAR(1024));
 EOF;
 
     $ret = $db->exec($sql);
@@ -178,8 +181,8 @@ EOF;
     }
 
             // Prepare INSERT statement to SQLite3 file db
-    $insert = "INSERT INTO IMG (phash, license, image,imagename,  url, mhash, local, dateuploaded, timestamp) 
-    VALUES (:phash, :license, :photograph, :imagename, :url, :mhash, :filename, :dateuploaded, :timestamp)";
+    $insert = "INSERT INTO IMG (phash, license, image,imagename,  url, mhash, local, dateuploaded, timestamp, crediturl) 
+    VALUES (:phash, :license, :photograph, :imagename, :url, :mhash, :filename, :dateuploaded, :timestamp, :crediturl)";
 
     $stmt = $db->prepare($insert);
 
@@ -195,7 +198,7 @@ EOF;
     $stmt->bindParam(':filename', $filename);
     $stmt->bindParam(':dateuploaded', $date);
     $stmt->bindParam(':timestamp', $sqlite_timestamp);
-
+    $stmt->bindParam(':crediturl', $crediturl);
     // Execute statement
     $stmt->execute();
 
