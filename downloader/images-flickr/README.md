@@ -1,6 +1,20 @@
 
 #Image Downloader in PHP - flickr.php
 
+Dependencies:
+
+    $ sudo apt-get install apache2
+    $ sudo apt-get install php5 libapache2-mod-php5
+    
+    $ sudo apt-get install php5-curl
+    
+    $ sudo apt-get install php5-cli php5-dev make
+    $ sudo apt-get install libsqlite3-0 libsqlite3-dev
+    $ sudo apt-get install php5-sqlite
+    
+    
+
+
 Put all the files from the phpflickr-master folder in the same directory.
 To run use command line:
 
