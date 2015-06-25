@@ -1,15 +1,32 @@
 <?php
 
+$filename = NULL;
+$database = NULL;
 
+foreach ($argv as $arg) {
+  $e=explode("=",$arg);
+  if(count($e)==2){
+    $_GET[$e[0]]=$e[1];
+  }else
+    $_GET[]=$e[0];        
+  }
+
+  $filename = $_GET[1];
 // Database stats
+$servername = "localhost";
+$username = "anna";
+$password = "password";
+$dbname = "hashes";
+
+
+/*
 $servername = "localhost";
 $username = "root";
 $password = "";
 $dbname = "hashes";
+*/
 
-
-
-$myfile = fopen("2015-03-20-2015-03-20_flickrdownload.txt", "r") or die("Unable to open file!");
+$myfile = fopen($filename, "r") or die("Unable to open file!");
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -28,7 +45,7 @@ if ($myfile) {
         print_r (explode($delim,$line));
 
 }
-    echo "CONTER: \n".$counter."\n";
+    echo "COUNTER: \n".$counter."\n";
     fclose($myfile);
 } else {
     echo 'error opening the file';
