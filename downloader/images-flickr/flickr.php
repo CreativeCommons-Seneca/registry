@@ -17,7 +17,7 @@ foreach ($argv as $arg) {
 
 $date = $_GET[1];
 $date2 = $_GET[2];
-echo "DATE2!!!! " . $date;
+
 
 
 if(empty($date2)){
@@ -103,7 +103,10 @@ while (strtotime($date) <= strtotime($date2)) {
 
     foreach ($photos['photo'] as $photo) {
 
-      if($interrupt == false || ($interrupt == true && $lines <= $i)){
+      if($interrupt == false || ($interrupt == true && $lines < $i)){
+        echo ($interrupt == true) ? "INTERRUPT " : "NO INTERRUPT";
+        echo "\n LINES: ".$lines;
+        echo "\n\n i: ".$i;
 
         $url = $photo['url_o'];
         $namefile = explode("/",$url);
@@ -171,8 +174,11 @@ while (strtotime($date) <= strtotime($date2)) {
             }catch (Exception $e){
               echo "\n\n GET FILE ERROR: ".$e;
             }
-            $authorname = $photo['ownername'];
-            $title = (empty($photo['title'])) ? "No Title" : $photo['title'];
+
+            $string = str_replace(array("\n", "\r"), ' ', $string);
+
+            $authorname = str_replace(array("\n", "\r"), ' ', $photo['ownername']);
+            $title = (empty($photo['title'])) ? "No Title" : str_replace(array("\n", "\r"), ' ', $photo['title']);
 
           }catch (Exception $e){
             echo "\n\n DOWNLOAD ERROR: ".$e."\n\n";
@@ -195,7 +201,7 @@ while (strtotime($date) <= strtotime($date2)) {
             $errorcount++; 
         }else{
     
-          $str = $license.$del.$title.$del.$authorname.$del.$url.$del.$sqlite_timestamp.$del.$filename.$del.$crediturl.$del.$dt->format('Y-m-d H:i:s')."\n";
+          $str = $license.$del.$title.$del.$authorname.$del.$url.$del.$sqlite_timestamp.$del.$namefile[4].$del.$filename.$del.$crediturl.$del.$epoch.$del.$dt->format('Y-m-d H:i:s')."\n";
           fwrite($myfile, $str);
       }
      
