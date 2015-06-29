@@ -9,13 +9,14 @@ using namespace std;
 
 int main(int argc, char **argv){
 
-    if (argc < 2){
+    if (argc < 2)
+    {
         printf("no input args\n");
         printf("expected: \"phash filename1 filename2\"\n");
         exit(1);
     }
     
-    const char *filename = argv[1];
+    const char* filename = argv[1];
     errno = 0;
     int i = 0;
     ulong64 tmphash;

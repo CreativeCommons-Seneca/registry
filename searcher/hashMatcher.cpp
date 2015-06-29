@@ -119,7 +119,6 @@ void printUsageAndExit()
     printf("Bad parameters. Usage:\n\n"
            "searcher -c NUM_CORES\n\n"
            "Then connect to the socket %s and send a 'match' or 'add' command\n"
-           "(one command per connection)\n\n"
            "match hash_uint64_in_hex max_distance_uint8_in_decimal\n"
            "add dbId_uint64_in_decimal hash_uint64_in_hex\n", SOCKET_PATH);
     exit(1);
