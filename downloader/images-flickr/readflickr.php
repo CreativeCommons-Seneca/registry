@@ -76,8 +76,8 @@ if ($myfile) {
 
             }
 
-            $hash = (empty($hash)) ? 14620491339638543539 : $hash;
-            $mhash = (empty($mhash)) ? "0c8e470ba1c0e874792da25f0561e1b9904d65c4f26d6ed316070a6ccb8a6466e9b232832d88eda61f2e230ccbc534ae5c5c1fc2f24964e2f8c29c8bc71e5b288fc7e3f1e8fc7e47" : $mhash;
+           // $hash = (empty($hash)) ? 14620491339638543539 : $hash;
+           // $mhash = (empty($mhash)) ? "0c8e470ba1c0e874792da25f0561e1b9904d65c4f26d6ed316070a6ccb8a6466e9b232832d88eda61f2e230ccbc534ae5c5c1fc2f24964e2f8c29c8bc71e5b288fc7e3f1e8fc7e47" : $mhash;
        
       if(empty($hash) || empty($imageinfo) || empty($mhash)){
         echo "\n\n EMPTY!! \n";

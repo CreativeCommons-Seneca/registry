@@ -2,8 +2,10 @@
 
 // Flickr API 
 require_once("phpflickr-master/phpFlickr.php");
+//Flickr File
 
 date_default_timezone_set('Greenwich');
+
 $date = NULL;
 $date2 = NULL;
 foreach ($argv as $arg) {
@@ -39,11 +41,17 @@ $errorcount=0;
 $errorname = "";
 $del = '\',\'';
 
-if (file_exists($date."-".$date2."_flickrdownload.txt")) {
-  $myfile = fopen($date."-".$date2."_flickrdownload.txt", 'a') or die("Unable to open errorfile file!");
+
+$sqlite_timestamp = date(DATE_RFC3339);
+
+while (strtotime($date) <= strtotime($date2)) {
+  echo "$date\n";
+
+  if (file_exists($date."_flickrdownload.txt")) {
+  $myfile = fopen($date."_flickrdownload.txt", 'a') or die("Unable to open errorfile file!");
   echo "\n\nFILE EXISTS!";
   $interrupt = true;
-   $f = fopen($date."-".$date2."_flickrdownload.txt", 'rb');
+   $f = fopen($date."_flickrdownload.txt", 'rb');
     $lines = 0;
     while (!feof($f)) {
         $lines += substr_count(fread($f, 8192), "\n");
@@ -60,19 +68,20 @@ if (file_exists($date."-".$date2."_flickrdownload.txt")) {
     echo "\n\nINTER PAGE: ".$startpage;
 
 } else {
-  $myfile = fopen($date."-".$date2."_flickrdownload.txt", 'w') or die("Unable to open errorfile file!");
+  $myfile = fopen($date."_flickrdownload.txt", 'w') or die("Unable to open errorfile file!");
 }
-// Files
-$errorfile = fopen($date."-".$date2."_flickrerrors.txt", "w") or die("Unable to open errorfile file!");
 
-//Flickr File
-$f = new phpFlickr("dd5266efb4a0e67238c32f8b8cfa2f92");
-$dir = $date."-".$date2."_pics";
+if (file_exists($date."_flickrerrors.txt")) {
+  $errorfile = fopen($date."_flickrerrors.txt", "a") or die("Unable to open errorfile file!");
+} else {
+  $errorfile = fopen($date."_flickrerrors.txt", "w") or die("Unable to open errorfile file!");
+}
+
+
+
+
+$dir = $date."_pics";
 mkdir($dir);
-$sqlite_timestamp = date(DATE_RFC3339);
-
-while (strtotime($date) <= strtotime($date2)) {
-  echo "$date\n";
 
   try{
   $beforet = ($date." 00:00:00");
@@ -81,16 +90,17 @@ while (strtotime($date) <= strtotime($date2)) {
 
   echo "\n\nBEFORE TIME: ".$beforet->format('Y-m-d H:i:sP');
 
-  $aftert = ($date2." 07:00:00");
+  $aftert = ($date." 23:59:59");
   $aftert = new DateTime($aftert);
   $after = $aftert->format('Y-m-d H:i:sP');
 
   $start = microtime(true);
-
+  $f = new phpFlickr("dd5266efb4a0e67238c32f8b8cfa2f92");
   $photos = $f->photos_search(array("max_upload_date"=>$after,"min_upload_date"=>$before,"per_page"=>"500","license"=>"1,2,3,4,5,6,7","extras"=>"url_o,owner_name, license, date_upload"));
-  echo "\nTOTAL: ".$photos['total'];
-  echo "\nPAGES: ".$photos['pages'];
+  echo "\nTOTAL ************************** : ".$photos['total'];
+  echo "\nPAGES ************************** : ".$photos['pages'];
   $pages = $photos['pages'];
+  echo "\n\nFOR DATE ********************* : ".$date;
   //print_r($photos);
 
   for($page=$startpage; $page <= $pages; $page++){
@@ -104,27 +114,17 @@ while (strtotime($date) <= strtotime($date2)) {
     foreach ($photos['photo'] as $photo) {
 
       if($interrupt == false || ($interrupt == true && $lines < $i)){
-        echo ($interrupt == true) ? "INTERRUPT " : "NO INTERRUPT";
-        echo "\n LINES: ".$lines;
-        echo "\n\n i: ".$i;
+  
 
         $url = $photo['url_o'];
         $namefile = explode("/",$url);
         $filename = $dir."/".$namefile[4];
         $crediturl = "https://flickr.com/photos/".$photo['owner']."/".$photo['id'];
 
-        echo "\n\n\n DATE UPLOADED!: ".$photo['dateupload']." \n";
 
         $epoch = $photo['dateupload']; 
         $dt = new DateTime("@$epoch");  // convert UNIX timestamp to PHP DateTime
-        echo $dt->format('Y-m-d H:i:sP');
-        echo $dt->format('Y-m-d H:i:sP');
-        echo "\n\n  MIN DATE: :";
-
-        echo $before;
-
-        echo "\n\n  MAX DATE: :";
-        echo $after;
+ 
           try{
             //file_put_contents($filename, file_get_contents($url));
 
@@ -144,7 +144,7 @@ while (strtotime($date) <= strtotime($date2)) {
 
             $license = $photo['license'];
 
-            echo "\n\n LICENSE: ".$license;
+            //echo "\n\n LICENSE: ".$license;
 
             switch ($photo['license']) {
               case "1":
@@ -165,6 +165,9 @@ while (strtotime($date) <= strtotime($date2)) {
               case "6":
               $license = $license6;
               break;
+              case "7":
+              $license = $license7;
+              break;
               default:
               echo $license;
             }
@@ -175,7 +178,7 @@ while (strtotime($date) <= strtotime($date2)) {
               echo "\n\n GET FILE ERROR: ".$e;
             }
 
-            $string = str_replace(array("\n", "\r"), ' ', $string);
+
 
             $authorname = str_replace(array("\n", "\r"), ' ', $photo['ownername']);
             $title = (empty($photo['title'])) ? "No Title" : str_replace(array("\n", "\r"), ' ', $photo['title']);
@@ -190,7 +193,7 @@ while (strtotime($date) <= strtotime($date2)) {
 
             $errorname = (empty($photos))? "No RESPONSE" : "";
    
-            $errorname = "page: ".$del.$page." date: ".$del.$date.$del." ".$counter;
+            $errorname = $date.$del.$page.$del.$photo['id'].$del.$url;
             $errorname.= (empty($photograph)) ? " no PHOTO" : ""; 
             $errorname.= (empty($title)) ? " no TITLE" : ""; 
             $errorname.=(empty($url)) ? "NO URL" : $url;
@@ -204,10 +207,12 @@ while (strtotime($date) <= strtotime($date2)) {
           $str = $license.$del.$title.$del.$authorname.$del.$url.$del.$sqlite_timestamp.$del.$namefile[4].$del.$filename.$del.$crediturl.$del.$epoch.$del.$dt->format('Y-m-d H:i:s')."\n";
           fwrite($myfile, $str);
       }
-     
+      $counter = $i; 
+      echo "\n ** COUNTER: ".$counter;    
       $counter++;
-      echo "\n ** COUNTER: ".$counter;
+      
   }// close the if interrupt statement
+
   $i++;
     } // close foreach photo
   }
