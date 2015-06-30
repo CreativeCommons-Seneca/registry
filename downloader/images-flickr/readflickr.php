@@ -1,5 +1,6 @@
 <?php
-
+// Flickr API 
+require_once("phpflickr-master/phpFlickr.php");
 $filename = NULL;
 $database = NULL;
 
@@ -15,14 +16,16 @@ foreach ($argv as $arg) {
 // Database stats
 
 
-
+$counter = 0;
 $servername = "localhost";
 $username = "root";
-$password = "";
+$password = "password";
 $dbname = "hashes";
 
 
 $myfile = fopen($filename, "r") or die("Unable to open file!");
+
+
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);
@@ -31,23 +34,40 @@ if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 } 
 
+$f = new phpFlickr("dd5266efb4a0e67238c32f8b8cfa2f92");
 if ($myfile) {
     while (($line = fgets($myfile)) !== false) {
         $counter++;
         $delim = '\',\'';
-
         $dir = str_replace("flickrdownload.txt", "pics", $filename);
         $imageinfo = explode($delim,$line);
-        $license = $imageinfo[0];
-        $title = $imageinfo[1];
-        $author = $imageinfo[2];
-        $imageurl = $imageinfo[3];
-        $imagefile = $imageinfo[6];
-        $name = $imageinfo[5];
-        $url = $imageinfo[7];
-        $uploaddateunix = $imageinfo[8];
-        $uploaddate = $imageinfo[9];
+
+        if(strpos($filename, 'error') === false){
+          
+          $license = $imageinfo[0];
+          $title = $imageinfo[1];
+          $author = $imageinfo[2];
+          $imageurl = $imageinfo[3];
+          $imagefile = $imageinfo[6];
+          $name = $imageinfo[5];
+          $url = $imageinfo[7];
+          $uploaddateunix = $imageinfo[8];
+          $uploaddate = $imageinfo[9];
+          
+
+        }else{
+          $id = $imageinfo[2];
+          $info = $f->photos_getInfo($id);
+          echo "\n\n INFO: ".$info['photo']['id'];
+          echo "\n\n DATE : ".$info['photo']['dateuploaded'];
+          echo "\n\n LICENSE : ".$info['photo']['license'];
+          echo "\n\n OWNER : ".$info['photo']['owner']['nsid'];
+          echo "\n\n OWNER NAME: ".$info['photo']['owner']['username'];
+          //print_r($info);
+
+        }
         print_r($imageinfo);
+
 
 
 

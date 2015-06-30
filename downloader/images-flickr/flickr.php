@@ -139,7 +139,7 @@ mkdir($dir);
             $fp = fopen($filename,'w');
             fwrite($fp, $rawdata); 
             fclose($fp);
-            
+           
             //exec("wget ".$url." -O ".$filename);
 
             $license = $photo['license'];
@@ -197,9 +197,9 @@ mkdir($dir);
             $errorname.= (empty($photograph)) ? " no PHOTO" : ""; 
             $errorname.= (empty($title)) ? " no TITLE" : ""; 
             $errorname.=(empty($url)) ? "NO URL" : $url;
-            $errorname.="ID: ".$photo['id'];
+           
        
-            $errorname.= $del.date(DATE_RFC3339);
+            $errorname.= $del.date(DATE_RFC3339)."\n";
             fwrite($errorfile, $errorname);
             $errorcount++; 
         }else{
