@@ -18,7 +18,7 @@ foreach ($argv as $arg) {
 
 $counter = 0;
 $servername = "localhost";
-$username = "root";
+$username = "anna";
 $password = "password";
 $dbname = "hashes";
 
@@ -39,41 +39,54 @@ if ($myfile) {
     while (($line = fgets($myfile)) !== false) {
         $counter++;
         $delim = '\',\'';
-        $dir = str_replace("flickrdownload.txt", "pics", $filename);
+        //$dir = str_replace("flickrdownload.txt", "pics", $filename);
+
+        
         $imageinfo = explode($delim,$line);
-
-        if(strpos($filename, 'error') === false){
-          
-          $license = $imageinfo[0];
-          $title = $imageinfo[1];
-          $author = $imageinfo[2];
-          $imageurl = $imageinfo[3];
-          $imagefile = $imageinfo[6];
-          $name = $imageinfo[5];
-          $url = $imageinfo[7];
-          $uploaddateunix = $imageinfo[8];
-          $uploaddate = $imageinfo[9];
-          
-
-        }else{
-          $id = $imageinfo[2];
-          $info = $f->photos_getInfo($id);
-          echo "\n\n INFO: ".$info['photo']['id'];
-          echo "\n\n DATE : ".$info['photo']['dateuploaded'];
-          echo "\n\n LICENSE : ".$info['photo']['license'];
-          echo "\n\n OWNER : ".$info['photo']['owner']['nsid'];
-          echo "\n\n OWNER NAME: ".$info['photo']['owner']['username'];
-          //print_r($info);
-
-        }
         print_r($imageinfo);
 
+        $license = $imageinfo[0];
+        $title = $imageinfo[1];
+        $author = $imageinfo[2];
+        $imageurl = $imageinfo[3];
+        $imagefile = $imageinfo[6];
+        $name = $imageinfo[5];
+        $url = $imageinfo[7];
+        $uploaddateunix = $imageinfo[8];
+        $uploaddate = $imageinfo[9];
 
+        if(strpos($filename, 'error') === false){
+          //$dir = str_replace("flickrdownload.txt", "pics", $filename);
+          //echo "\n\nDIR: ".$dir;
+          
+        }else{
+         
 
+          $dlAttempt = 0;
 
+            while ($dlAttempt < 5) {
+              echo "\n\n DL ATTEMPTS: ".$dlAttempt;
+              $ch = curl_init($imageurl);
+              curl_setopt($ch, CURLOPT_HEADER, 0);
+              curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+              curl_setopt($ch, CURLOPT_BINARYTRANSFER,1);
+              $rawdata=curl_exec ($ch);
+              curl_close ($ch);
 
-        
-        
+              $fp = fopen($imagefile,'w');
+              fwrite($fp, $rawdata); 
+              fclose($fp);
+
+              if(empty(file_get_contents($imagefile))){
+                $dlAttempt++;
+              } else {
+                $dlAttempt=5;
+              }
+
+            }  
+
+        }
+             
         try{
           $hash = exec('./phash '.$imagefile);
           }catch (Exception $e) {
@@ -99,7 +112,7 @@ if ($myfile) {
            // $hash = (empty($hash)) ? 14620491339638543539 : $hash;
            // $mhash = (empty($mhash)) ? "0c8e470ba1c0e874792da25f0561e1b9904d65c4f26d6ed316070a6ccb8a6466e9b232832d88eda61f2e230ccbc534ae5c5c1fc2f24964e2f8c29c8bc71e5b288fc7e3f1e8fc7e47" : $mhash;
        
-      if(empty($hash) || empty($imageinfo) || empty($mhash)){
+      if(empty($hash) || empty($imageinfo) || empty($mhash) || empty(file_get_contents($imagefile))){
         echo "\n\n EMPTY!! \n";
 
                 }else {
@@ -108,7 +121,7 @@ if ($myfile) {
                       $title = mysqli_real_escape_string($conn, $title);
 
                         // MYSql Insert Statement
-                        $sql = "INSERT INTO IMG(phash,mhash,name,title, directory,author, license, url, imageurl, source, dateuploaded, dateuploadu) 
+                        $sql = "INSERT INTO IMG33(phash,mhash,name,title, directory,author, license, url, imageurl, source, dateuploaded, dateuploadu) 
                                 VALUES('$hash','$mhash','$name', '$title','$imagefile', '$author','$license','$url', '$imageurl', 'Flickr', '$uploaddate', '$uploaddateunix')";
                         if ($conn->query($sql) === TRUE) {
                             echo "New records created successfully";
@@ -121,8 +134,6 @@ if ($myfile) {
                   
                     }
                 }
-
-
 
 }
     echo "COUNTER: \n".$counter."\n";

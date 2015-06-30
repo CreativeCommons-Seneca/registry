@@ -42,7 +42,7 @@ $errorname = "";
 $del = '\',\'';
 
 
-$sqlite_timestamp = date(DATE_RFC3339);
+
 
 while (strtotime($date) <= strtotime($date2)) {
   echo "$date\n";
@@ -128,19 +128,26 @@ mkdir($dir);
           try{
             //file_put_contents($filename, file_get_contents($url));
 
+            
 
-            $ch = curl_init($url);
-            curl_setopt($ch, CURLOPT_HEADER, 0);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_BINARYTRANSFER,1);
-            $rawdata=curl_exec ($ch);
-            curl_close ($ch);
+         
+              
+              $ch = curl_init($url);
+              curl_setopt($ch, CURLOPT_HEADER, 0);
+              curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+              curl_setopt($ch, CURLOPT_BINARYTRANSFER,1);
+              $rawdata=curl_exec ($ch);
+              curl_close ($ch);
 
-            $fp = fopen($filename,'w');
-            fwrite($fp, $rawdata); 
-            fclose($fp);
+              $fp = fopen($filename,'w');
+              fwrite($fp, $rawdata); 
+              fclose($fp);
+
            
-            //exec("wget ".$url." -O ".$filename);
+
+        
+           
+           //exec("wget ".$url." -O ".$filename);
 
             $license = $photo['license'];
 
@@ -186,20 +193,18 @@ mkdir($dir);
           }catch (Exception $e){
             echo "\n\n DOWNLOAD ERROR: ".$e."\n\n";
           }
-
+          $sqlite_timestamp = date(DATE_RFC3339);
           //Check for empty fields
           if(empty($license) || empty($photograph) || empty($title)
             || empty($authorname) || empty($url) || empty($crediturl)){
 
-            $errorname = (empty($photos))? "No RESPONSE" : "";
+            $errorname = (empty($photos))? "No RESPONSE\n" : "";
    
-            $errorname = $date.$del.$page.$del.$photo['id'].$del.$url;
+            $errorname = $license.$del.$title.$del.$authorname.$del.$url.$del.$sqlite_timestamp.$del.$namefile[4].$del.$filename.$del.$crediturl.$del.$epoch.$del.$dt->format('Y-m-d H:i:s').$del;
             $errorname.= (empty($photograph)) ? " no PHOTO" : ""; 
             $errorname.= (empty($title)) ? " no TITLE" : ""; 
-            $errorname.=(empty($url)) ? "NO URL" : $url;
-           
-       
-            $errorname.= $del.date(DATE_RFC3339)."\n";
+            $errorname.=(empty($url)) ? "NO URL" : "";
+            $errorname.="\n";
             fwrite($errorfile, $errorname);
             $errorcount++; 
         }else{
