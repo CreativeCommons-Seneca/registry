@@ -1,0 +1,68 @@
+MATCH
+
+Request:
+{"hash":"pHash"}
+
+
+Result: 
+{  
+   "match":"true/false",
+   "totalIds":"5",
+   "matches":[  
+      {  
+         "id":"14456",
+         "name":"Image Name",
+         "url":"http://image.url",
+         "author":"author name",
+         "license:":"CC-BY",
+         "date":"2015-03-20"
+      },
+      {  
+         "id":"23455",
+         "name":"Image Name",
+         "url":"http://image.url",
+         "author":"author name",
+         "license:":"CC-BY",
+         "date":"2015-03-20"
+      }
+   ],
+   "result":"MATCHES FOUND"
+}
+
+ 
+Empty Result
+{  
+   "match":"true/false",
+   "totalIds":"0",
+   "matches":[  
+
+   ],
+   "result":"NO MATCHES FOUND"
+}
+
+ADD
+Request:
+{  
+   "imagename":"imagename",
+   "url":"imageurl",
+   "author":"author name",
+   "license":"CC-BY",
+   "hash":"pHashValue",
+   "date":"date",
+   "source":"source"
+}
+Result:
+{  
+   "id":"imageid",
+   "type":"IMAGE ADDED"
+}
+Error Results
+{  
+   "id":"0",
+   "type":"COULD NOT CONNECT"
+}
+
+{  
+   "id":"0",
+   "type":"IMAGE ALREADY EXISTS"
+}
