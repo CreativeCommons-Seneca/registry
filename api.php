@@ -1,4 +1,5 @@
 <?php
+ini_set('precision', 20); 
 // TO-DO Complete Validation
 $servername = "localhost";
 $username = "anna";
@@ -23,11 +24,11 @@ if(isset($_GET) || isset($_POST)){
 		$pre = "a";
 	
 		/*
-		$args["phash"] = 10335253941570932017;
+		$args["phash"] = $apiargs["phash"];
 		$args["mhash"] = b4c5ac0d5e3b66489507cd1b32d55b74a67625db78b69de36ff1f8039dc5d2e9b76565f8b6f5381a6d736e7a78b116da595db36ae5f824d051b49d236d7159b39ec976d1f3abcf86;
-    $args["name"] = $apiargs["name"];
-    $args["directory"] = $directory;
-    $args["author"] = $apiargs["author"];
+	    $args["name"] = $apiargs["name"];
+	    $args["directory"] = $directory;
+	    $args["author"] = $apiargs["author"];
 		$args["license"] = $apiargs["license"];
 		$args["url"] = $apiargs["url"];
 		$args["imageurl"] = $apiargs["imageurl"];
@@ -41,11 +42,11 @@ if(isset($_GET) || isset($_POST)){
 		*/
 
 		// temporary testing purpose
-		$args["phash"] = 10335253941570932017;
+		$args["phash"] = 11415234608916087887;
 		$args["mhash"] = "b4c5ac0d5e3b66489507cd1b32d55b74a67625db78b69de36ff1f8039dc5d2e9b76565f8b6f5381a6d736e7a78b116da595db36ae5f824d051b49d236d7159b39ec976d1f3abcf86";
-    $args["name"] = $apiargs["name"];
-    $args["directory"] = "directory";
-    $args["author"] = "author";
+	    $args["name"] = $apiargs["name"];
+	    $args["directory"] = "directory";
+	    $args["author"] = "author";
 		$args["license"] = "cc-by";
 		$args["url"] = "url/here";
 		$args["imageurl"] = "img/url.jpg";
@@ -58,7 +59,7 @@ if(isset($_GET) || isset($_POST)){
 		$args["falsePositives"] = "none";
 
        
-        echo "\n\n  ARGS:  ".count($args);
+       // echo "\n\n  ARGS:  ".count($args);
 
 	} else if (strcmp($request,"delete") === 0){
 		//TO-DO complete DELETE
@@ -134,6 +135,7 @@ if(isset($_GET) || isset($_POST)){
 						$match = array();
 						$match["id"] = $row["id"];
 						$match["name"] = $row["title"];
+						$match["url"] = $row["url"];
 						$match["author"] = $row["author"];
 						$match["license"] = $row["license"];
 						$match["date"] = $row["dateuploaded"];
@@ -145,6 +147,10 @@ if(isset($_GET) || isset($_POST)){
 			} else if (strcmp($request,"add") === 0){
 				$response["id"] = $ids[1];
 				$response["type"] = "image added";
+			
+		} else if (strcmp($request,"delete") === 0){
+				$response["deleted"] = $ids[0];
+
 			}
 
 		}// close if id is 0 (success);
