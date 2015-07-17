@@ -64,21 +64,9 @@ while (strtotime($date) <= strtotime($date2)) {
   $interrupt = true;
    $f = fopen($date."_flickrdownload.txt", 'rb');
     
-    /*$lines = 0;
-    while (!feof($f)) {
-        $lines += substr_count(fread($f, 8192), "\n");
-    }
-    fclose($f);
-    echo "\n\nLINES: ".$lines;
-
-    while ($lines >= 500){
-      $startpage++;
-      $lines=$lines-500;
-      echo "\nLINES : ".$lines;
-    }
-*/
     $lines = $interruptedfile[13];
     echo "\n\nINTER PAGE: ".$startpage;
+    echo "\n\nINTERRUPUTED INTERVAL: ".$interrupinterval;
 
 } else {
   $myfile = fopen($date."_flickrdownload.txt", 'w') or die("Unable to open errorfile file!");
@@ -103,18 +91,17 @@ $beforet = new DateTime($date);
   try{
 
     for($x = $interrupinterval; $x <= 48; $x++){
-      //$beforet = ($date." 00:00:00");
+      $bef = ($date." 00:00:00");
+      $beforet = new DateTime($bef);
 
       if($x == 48){
         $interval = new DateInterval('PT29M59S');
       } else{
-
+        $interval = new DateInterval('PT30M');
+      }
 
       $beforeinterval = new DateInterval('PT'.($x-1)*(30).'M');
       $beforet->add($beforeinterval);
-      $interval = new DateInterval('PT30M');
-      }
-      
       $before =$beforet->format('Y-m-d H:i:sP');
 
       echo "\n\nBEFORE TIME: ".$before;
@@ -194,7 +181,7 @@ $beforet = new DateTime($date);
                     $duplicate = true;
                   } else{
                     $duplicate = false;
-                    echo "\n\n LINES ".$lines;
+                    if(!empty($lines)) {echo "\n\n LINES ".$lines;}
                     echo "\n\n i ".$i;
                     echo "\n\n FILE DOESNT EXIST!!";
 
