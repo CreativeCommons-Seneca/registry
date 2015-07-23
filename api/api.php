@@ -2,6 +2,8 @@
 include 'ccError.php';
 
 ini_set('precision', 20); 
+date_default_timezone_set('Greenwich');
+
 // TO-DO Complete Validation
 $servername = "localhost";
 $username = "root";//"anna";
@@ -9,6 +11,7 @@ $password = "hosung";//"password";
 $dbname = "hashes";
 
 function echoError($code){
+	$response["status"] = "fail";
 	$response["errorcode"] = $code;
 	$response["errormessage"] = getErrorString($code);
 	echo json_encode($response);
@@ -36,13 +39,13 @@ if(isset($_GET) || isset($_POST)){
     	// TO-DO complete ADD
 
 		// TO-DO validation
-		$error = true; 
-
+		
 		if ($error){
 			$errorcode = ccError::$ERR_API_INVALID_ADD_PARAM;
 		}
 		else{
 			// temporary testing purpose
+			/*
 			$args["phash"] = 11415234608916087887;
 			$args["mhash"] = "b4c5ac0d5e3b66489507cd1b32d55b74a67625db78b69de36ff1f8039dc5d2e9b76565f8b6f5381a6d736e7a78b116da595db36ae5f824d051b49d236d7159b39ec976d1f3abcf86";
 			$args["name"] = $apiargs["name"];
@@ -59,9 +62,11 @@ if(isset($_GET) || isset($_POST)){
 			$args["reasons"] = "none";
 			$args["falsePositives"] = "none";
 
-			/*
+			http://localhost/api.php?request=add&phash=11415224608216087807&mhash=none&name=Jane&author=Tom&license=CC&url=http://google.com&imageurl=http://google.com/test.jpg&source=flickr&title=Hello
+			*/
+			
 			$args["phash"] = $apiargs["phash"];
-			$args["mhash"] = b4c5ac0d5e3b66489507cd1b32d55b74a67625db78b69de36ff1f8039dc5d2e9b76565f8b6f5381a6d736e7a78b116da595db36ae5f824d051b49d236d7159b39ec976d1f3abcf86;
+			$args["mhash"] = "none";
 		    $args["name"] = $apiargs["name"];
 		    $args["directory"] = $directory;
 		    $args["author"] = $apiargs["author"];
@@ -69,20 +74,22 @@ if(isset($_GET) || isset($_POST)){
 			$args["url"] = $apiargs["url"];
 			$args["imageurl"] = $apiargs["imageurl"];
 			$args["source"] = $apiargs["source"];
-			$args["dateuploaded"] = $apiargs["dateuploaded"];
-			$args["dateuploadedu"] = $epochtime;
+			$args["dateuploaded"] = date(DATE_RFC3339);
+			$date = new DateTime();
+
+			$args["dateuploadu"] = $date->getTimestamp();
 			$args["title"] = $apiargs["title"];
 			$args["deleted"] = "n";
 			$args["reasons"] = "none";
-			$args["falsePositives"] = $apiargs["date"];
-			*/
+			$args["falsePositives"] = "none";
+			
 			$pre = "a";
 		}
        // echo "\n\n  ARGS:  ".count($args);
 
 	} else if (strcmp($request,"delete") === 0){
 		//TO-DO complete DELETE
-		$error = empty($args["id"])? true : false;
+		$error = empty($apiargs["id"])? true : false;
 		if ($error){
 			$errorcode = ccError::$ERR_API_INVALID_DELETE_PARAM;
 		}
@@ -140,8 +147,7 @@ if(isset($_GET) || isset($_POST)){
 	
 	if($ids[0] == 0){
 		if(strcmp($request,"match") === 0){
-
-			$response["match"] = "true";
+			$response["status"] = "ok";
 			$response['total'] = $ids['1'];
 			$response['matches']=array();
 			array_shift($ids);
@@ -179,18 +185,17 @@ if(isset($_GET) || isset($_POST)){
 				// echo "No Results";			
 			}
 		} else if (strcmp($request,"add") === 0){
+			$response["status"] = "ok";
 			$response["id"] = $ids[1];
-			$response["type"] = "image added";
 
 		} else if (strcmp($request,"delete") === 0){
-			$response["deleted"] = $ids[0];
+			$response["status"] = "ok";
+			//$response["deleted"] = $ids[0];
 		}
 
 	}// close if id is 0 (success);
 	else{
-		$response["match"] = false;
-		//$response["total"] = 0;
-
+		$response["status"] = "fail";
 		$response["errorcode"] = $ids['1'];
 		$response["errormessage"] = $ids['2'];
 	}
