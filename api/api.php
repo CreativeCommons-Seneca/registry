@@ -196,8 +196,8 @@ if(isset($_GET) || isset($_POST)){
 	}// close if id is 0 (success);
 	else{
 		$response["status"] = "fail";
-		$response["errorcode"] = $ids['1'];
-		$response["errormessage"] = $ids['2'];
+		$response["errorcode"] = $ids['0'];
+		$response["errormessage"] = $ids['1'];
 	}
 
 	//seccess case. generate json from response
