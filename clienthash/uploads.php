@@ -7,6 +7,8 @@ $counter = 0;
 $matches = 0;
 $errors = 0;
     if(isset($_POST)){
+
+      print_r($_POST);
  
       $hashes = explode(",",$_POST["hashes"]);
   

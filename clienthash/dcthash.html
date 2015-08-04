@@ -7,6 +7,7 @@
    margin: 20px;
    padding: 10px;
    background: #c0ffee;
+
  }
 </style>
 <body>
@@ -35,14 +36,21 @@
 
    var images = [];
    var hashes=[];
+   var originals=[];
+
+
+
 
 
 // Load the image on drag and drop
 function load_file(file){
   var reader = new FileReader();
   reader.onload = function (event) {
-    var img = new Image()
-    img.src = reader.result;
+    var img = new Image();
+    var buff = reader.result;
+    //console.log(reader.readAsDataURL(buff));
+    img.src = buff;
+    //console.log(img.src);
     var canvas=document.createElement("canvas");
     var ctx=canvas.getContext("2d");
     canvas.height=img.height;
@@ -55,26 +63,38 @@ function load_file(file){
     var imageData = ctx.getImageData(x, y, img.width, img.height);
     var data = imageData.data;
 
+    console.log("************** IMAG DATA ********************");
+    console.log(data);
+
     var convolve = new Array();
+    var orig = new Array();
 
     // Image pixel arraay, [x][y]
     // Each x - element contains the corresponding y-coordinate    
     var xpixels = new Array();
     for(x = 0; x < img.width; x++){
       xpixels[x] = new Array();
+      orig[x] = new Array();
     }
 
     for(var i = 0; i < data.length; i += 4) {
+
+      var original ={x:0,y:0,rgb:0};
+      original.y = Math.floor(i/(4*img.width));
+      original.x = i/4 -(img.width*original.y);
+      original.rgb = data[i];
+   
+      orig[original.x][original.y] = data[i];
 
 
       // Greyscale the image (using CImg method)
       brightness = (66*(data[i]) + 129*data[i+1] + 25*data[i+2] + 128)/256 + 16;
       // red
-      data[i] = brightness;
+      //data[i] = brightness;
       // green
-      data[i + 1] = brightness;
+      //data[i + 1] = brightness;
       // blue
-      data[i + 2] = brightness;
+      //data[i + 2] = brightness;
 
 
       var g = (i<0)? 0: i-4;
@@ -87,13 +107,38 @@ function load_file(file){
 
 
       // Set the pixels in the coordinates array
-      xpixels[greyarray.x][greyarray.y] = brightness;
-
+      xpixels[greyarray.x][greyarray.y] = parseFloat(brightness.toFixed(4));
       convolve.push(greyarray);
     }
 
+  
+var canvasWidth  = ctx.width;
+var canvasHeight = ctx.height;
+     
+var buf = new ArrayBuffer(imageData.data.length);
+var buf8 = new Uint8ClampedArray(buf);
+var dataa = new Uint32Array(buf);
+    
+
+
+
+
+   console.log("****************** ORIGINAL ***************");
+
+
+     //console.log(orig);
+
+     console.log("****************** ORIGINAL BUFFER ***************");
+
+
+    // console.log(buf8);
+     //console.log(dataa);
+ 
+     console.log("****************** GREY ***************");
+     //console.log(xpixels);
         // overwrite original image
         ctx.putImageData(imageData, 0, 0);
+
 
 
         // Apply the convolve filter 
@@ -114,12 +159,18 @@ function load_file(file){
             for (zm = -mz1; zm<=mz2; ++zm){
               for (ym = -my1; ym<=my2; ++ym){
                 for (xm = -mx1; xm<=mx2; ++xm){
+
+                  //console.log(x+xm,y+ym);
+
                  val+=Math.trunc(xpixels[x+xm][y+ym]);
+                  //console.log(val);
                }
 
              }
            }
            convolvearray[x][y] = val;
+           //console.log(x,y);
+           //console.log(val);
            val = 0;
          }
        }
@@ -130,7 +181,7 @@ function load_file(file){
 
 
      // Apply the convolve filter to the boundary (edge pixels)
-     for(y=0; y< img.width; y++){
+     for(y=0; y< img.height; y++){
       for (x = 0; x<img.width; (y<my1 || y>=mye || z<mz1 || z>=mze)?++x:((x<mx1-1 || x>=mxe)?++x:(x=mxe))) {
 
         val = 0;
@@ -156,6 +207,28 @@ function load_file(file){
       }
     }
 
+
+
+// Create the resized array 
+var resized = new Array();
+for(x=0; x < 32; x++){
+  resized[x] = new Array();
+}
+
+
+
+// Resize the image 
+var xr = img.width/32;
+var yr = img.height/32;
+for(x=0;x<32;x++){
+  for(y=0;y<32;y++){
+    resized[x][y] = convolvearray[Math.trunc(x*xr)][Math.trunc(y*yr)];
+
+  }
+}
+
+console.log(" ************** RESIZE **********");
+console.log(resized);
 //Create the matrix used in multiplication (contstant)
 var matrix = new Array();
 for(x=0; x < 32; x++){
@@ -200,7 +273,8 @@ for (i=0;i<32;i++){
   for (j=0;j<32;j++){
     total = 0;
     for(k=0; k < 32; k++){
-      total+=matrix[k][j]*convolvearray[i][k];
+      //total+=matrix[k][j]*convolvearray[i][k];
+      total+=matrix[k][j]*resized[i][k];
 
     }
     result[i][j] = total;
@@ -281,7 +355,7 @@ console.log(median);
 
 
 //console.log(transpose);    
-img.src = canvas.toDataURL('image/jpeg');
+img.src = canvas.toDataURL();
 
 
 var hashold = dctHash(hashimage, median);
@@ -315,8 +389,25 @@ img.acc = 0;
 document.body.appendChild(img);
 
 images.push(img);
-hashes.push(phash + "+" + file.name + "+"+img.hash);
+hashes.push(phash + "+" + file.name + "+"+img.hash+ "+"+img.width+ "+"+img.height);
 console.log(hashes);
+
+//console.log("originals");
+
+var counter = 0;
+for(x=0; x < img.width; x++){
+  for(y=0; y <img.height; y++){
+
+   originals.push(x + "+" + y +"+"+ orig[x][y]);
+
+
+  }
+}
+
+console.log(originals.length);
+
+
+
 
 
 
@@ -331,17 +422,25 @@ reader.readAsDataURL(file);
 
 $(document).ready(function(){
   $("button").click(function(){
+    console.log("inside json");
+
+    console.log(originals.length);
+    console.log(hashes.length);
 
    var form_data = new FormData();  
 
    form_data.append("hashes", hashes);
+ 
+
+
+
    $.ajax({
                   url: 'uploads.php', // point to server-side PHP script 
                   dataType: 'text',  // what to expect back from the PHP script, if anything
                   cache: false,
                   contentType: false,
                   processData: false,
-                  data: form_data,                         
+                  data: form_data,                       
                   type: "post",
                   success: function(php_script_response){
                   	console.log("Resp");
