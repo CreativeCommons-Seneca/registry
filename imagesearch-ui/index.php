@@ -58,7 +58,7 @@ $sql = "SELECT * FROM IMG where id IN(".$idstring.");";
 $result = $conn->query($sql);
 
 if ($result->num_rows > 0) {
-    echo '<div class="col-sm-9"><h2>Matches</h2>';
+    echo '<div class="col-sm-9"><h2>'.$_SESSION['total'].' Matches</h2>';
     while($row = $result->fetch_assoc()) {
         $pattern = "/CC-BY-SA\w*/i";
         $pattern2 = "/CC-BY\w*/i";

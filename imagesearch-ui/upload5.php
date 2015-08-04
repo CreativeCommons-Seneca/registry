@@ -30,7 +30,19 @@ if(isset($_POST["submit"])) {
 }
 
 
-
+/*// Check if file already exists
+if (file_exists($target_file)) {
+    $message = "Sorry, file already exists.";
+    $uploadOk = 0;
+}
+/*
+// Check file size
+if ($_FILES["fileToUpload"]["size"] > 500000) {
+    echo "Sorry, your file is too large.";
+    $uploadOk = 0;
+}
+*/
+// Allow certain file formats
 if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "JPG" && $imageFileType != "jpeg"
 && $imageFileType != "gif" ) {
     $message = "Sorry, only JPG, JPEG, PNG & GIF files are allowed.";
@@ -46,12 +58,19 @@ if ($uploadOk == 0) {
     $_SESSION['file'] = $_FILES;
     header('Location: index.php');
 
-
+// if everything is ok, try to upload file
 } else {
     if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
-   
-        $results = exec("./mhexe/mhsearcher mhexe/tree.mh /var/www/html/cc/uploads/".$_FILES["fileToUpload"]["name"]." 0.45");
+        //session_start();
+        //$_SESSION['results'] = '2,3,5';
+        //header('Location: index.php');
+        //echo "The file ". basename( $_FILES["fileToUpload"]["name"]). " has been uploaded.\n\n POSTS!! *************";
+        //print_r($_POST);
 
+        //echo "\n\n       ". "./mhexe/mhsearcher mhexe/tree.mh /var/www/html/cc/uploads/".$_FILES["fileToUpload"]["name"]." 0.4";
+        $results = exec("./mhexe/mhsearcher mhexe/tree.mh /var/www/html/cc/uploads/".$_FILES["fileToUpload"]["name"]." 0.2");
+        //echo "\n\nRESULTS:    \n\n".$results;
+        //echo "\n\n\n";
         $ids = (explode(",",$results));
         if($ids[0] == 0){
             echo "\nNO ERRORS!!\n".count($ids);
@@ -66,6 +85,11 @@ if ($uploadOk == 0) {
             $_SESSION['file'] = $_FILES;
             $_SESSION['results'] = $idstring;
             $_SESSION['original'] = $_FILES["fileToUpload"]["name"];
+            header('Location: index.php');
+        }
+        else {
+            unset($_SESSION['results']);
+            $_SESSION['error'] = $ids[1];
             header('Location: index.php');
         }
 
@@ -87,10 +111,11 @@ if(!empty($_POST['url'])){
     $ids = (explode(",",$results));
 
     if($ids[0] == 0){
-        echo "\nNO ERRORS!!\n".count($ids);
+        //echo "\nNO ERRORS!!\n".count($ids);
+        $total = $ids[1];
         array_shift($ids);
         array_shift($ids);
-        echo "\nAFTER!!\n".count($ids);
+        //echo "\nAFTER!!\n".count($ids);
         print_r($ids);
         $idstring = implode(', ',$ids);
         //echo "\n\nID-STRING  ".$idstring;
@@ -99,6 +124,7 @@ if(!empty($_POST['url'])){
         $_SESSION['file'] = $_FILES;
         $_SESSION['results'] = $idstring;
         $_SESSION['original'] = 'flower.jpg';
+        $_SESSION['total'] = $total;
         header('Location: index.php');
     }
 
