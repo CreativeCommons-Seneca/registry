@@ -1,14 +1,11 @@
 <?php
 include 'ccError.php';
+include 'ccDB.php';
 
 ini_set('precision', 20); 
 date_default_timezone_set('Greenwich');
 
 // TO-DO Complete Validation
-$servername = "localhost";
-$username = "root";//"anna";
-$password = "hosung";//"password";
-$dbname = "hashes";
 
 function echoError($code){
 	$response["status"] = "fail";
@@ -125,7 +122,7 @@ if(isset($_GET) || isset($_POST)){
 			throw new Exception(ccError::$ERR_API_SOCKET_CREATE);
 		}
 
-		if ( (socket_connect($socket, "/tmp/cc.daemon.sock")) == false){
+		if ( (socket_connect($socket, "/var/cc/cc.daemon.sock")) == false){
 			throw new Exception(ccError::$ERR_API_SOCKET_CONNECT);
 		}
 
