@@ -1,3 +1,4 @@
+## Current database structure
 
 ```
 CREATE TABLE `IMG` (

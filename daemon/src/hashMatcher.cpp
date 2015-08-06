@@ -31,7 +31,8 @@
 #include "hashMatcher.h"
 #include "database.h"
 
-#define SOCKET_PATH "/tmp/cc.daemon.sock"
+#define SOCKET_PATH "/var/cc/cc.daemon.sock"
+//#define SOCKET_PATH "/var/www/html/cc.daemon.sock"
 
 #define CONNECTION_QUEUE_SIZE 10
 
