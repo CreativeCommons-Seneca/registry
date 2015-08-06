@@ -9,9 +9,11 @@ Following library must be installed
 
 ## Build Instruction
 
+```
 $cd build
 $make clean
 $make
+```
 
 ## ini file
 
@@ -45,6 +47,6 @@ $chmod 777 /var/cc
 
 ## Run
 
-* number of cores should be used as a commandline argument
+* number of cores should be used as a commandline argument  
   ./regdaemon -c 4
 

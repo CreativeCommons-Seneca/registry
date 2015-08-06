@@ -25,6 +25,8 @@
 * success : 0
 * failed  : errorcode,errormsg
 
-
+## Test
+```
 http://localhost/api.php?request=match&hash=11788043576878985364
 echo "m hash:MTE3ODgwNDM1NzY4Nzg5ODUzNjQ=" | netcat -U /tmp/cc.daemon.sock
+```
