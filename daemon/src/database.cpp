@@ -315,8 +315,12 @@ RCODE addNewContent(TCmdMap map, uint64_t *cid){
 		}
 
 		//delete last ", "
-		sqlText.pop_back();		sqlText.pop_back();			//INSERT INTO IMG(a, b, c,
-		sqlText2.pop_back();	sqlText2.pop_back();		//VALUES(a1, b2, c1,
+		//sqlText.pop_back();		sqlText.pop_back();			//INSERT INTO IMG(a, b, c,
+		//sqlText2.pop_back();	sqlText2.pop_back();		//VALUES(a1, b2, c1,
+
+		//change because of old gcc version. pop_back support from gcc 4.7
+		sqlText.resize(sqlText.size() - 2);
+		sqlText2.resize(sqlText2.size() - 2);
 
 		sqlText += ") " + sqlText2 + ")";					//INSERT INTO IMG(a, b, c) VALUES(a1, b2, c1)
 
