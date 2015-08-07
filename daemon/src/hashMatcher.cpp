@@ -26,13 +26,13 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <algorithm>
+#include <sstream>
 
 #include "base64/decode.h"
 #include "hashMatcher.h"
 #include "database.h"
 
-#define SOCKET_PATH "/var/cc/cc.daemon.sock"
-//#define SOCKET_PATH "/var/www/html/cc.daemon.sock"
+#define SOCKET_PATH "/tmp/cc.daemon.sock"
 
 #define CONNECTION_QUEUE_SIZE 10
 
@@ -228,6 +228,12 @@ TCmdMap parseCommand(const char* command){
 	return cmdMap;
 }
 
+std::string intToString(int input){
+	std::stringstream out;
+	out << input;
+	return out.str();
+}
+
 /**
  * Run command from client. Valid commands:
  * 
@@ -275,7 +281,7 @@ void processCommand(int socket, const char* command)
 			auto search = cmdMap.find("phash");
 			if(search == cmdMap.end() || search->second.length() == 0){
 				printError(ERR_DAEMON_INVALID_REQUEST);
-				response = std::to_string(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
+				response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
 			}
 			else{
 				uint64_t id = 0;
@@ -286,10 +292,10 @@ void processCommand(int socket, const char* command)
 						uint64_t uiHash = std::stoull(strHash);
 
 						add(uiHash, id);
-						response = "0," + std::to_string(id);
+						response = "0," + intToString(id);
 					}
 					else{
-						response = std::to_string(rCode);
+						response = intToString(rCode);
 						std::string errorstring = getLastDBErrorString();
 						if (errorstring.length() > 0){
 							response += "," + errorstring;
@@ -297,7 +303,7 @@ void processCommand(int socket, const char* command)
 					}
 				}catch(std::exception &e){
 					std::cerr << "# ERR: " << e.what();
-					response = std::to_string(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
+					response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
 				}
 			}
 		}
@@ -308,7 +314,7 @@ void processCommand(int socket, const char* command)
 			auto search = cmdMap.find("hash");
 			if(search == cmdMap.end()){
 				printError(ERR_DAEMON_INVALID_REQUEST);
-				response = std::to_string(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
+				response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
 			}
 			else{
 				try{
@@ -317,15 +323,15 @@ void processCommand(int socket, const char* command)
 					uint64_t uiHash = std::stoull(strHash);
 					::search(uiHash, 4);
 					response = "0,";
-					response += std::to_string(GBLsearchResults.size());
+					response += intToString(GBLsearchResults.size());
 
 					for (unsigned i = 0; i < GBLsearchResults.size(); i++)
 					{
-						response += "," + std::to_string(GBLsearchResults[i].dbId);
+						response += "," + intToString(GBLsearchResults[i].dbId);
 					}
 				}catch(std::exception &e){
 					std::cerr << "# ERR: " << e.what();
-					response = std::to_string(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
+					response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
 				}
 			}
 		}
@@ -337,7 +343,7 @@ void processCommand(int socket, const char* command)
 			auto search = cmdMap.find("id");
 			if(search == cmdMap.end()){
 				printError(ERR_DAEMON_INVALID_REQUEST);
-				response = std::to_string(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
+				response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
 			}
 			else{
 				RCODE rCode;
@@ -349,7 +355,7 @@ void processCommand(int socket, const char* command)
 						response = "0,";
 					}
 					else{
-						response = std::to_string(rCode);
+						response = intToString(rCode);
 						std::string errorstring = getLastDBErrorString();
 						if (errorstring.length() > 0){
 							response += "," + errorstring;
@@ -357,7 +363,7 @@ void processCommand(int socket, const char* command)
 					}
 				}catch(std::exception &e){
 					std::cerr << "# ERR: " << e.what();
-					response = std::to_string(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
+					response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
 				}
 			}
 		}
