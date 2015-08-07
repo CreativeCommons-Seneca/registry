@@ -5,7 +5,13 @@ Following library must be installed
 * mysqlcppconn
   MySQL Connector/C++ : https://dev.mysql.com/downloads/connector/cpp/1.1.html
 
-* pthread
+```
+$ wget http://dev.mysql.com/get/Downloads/Connector-C++/mysql-connector-c++-1.1.6-linux-glibc2.5-x86-64bit.rpm
+or
+$ wget http://dev.mysql.com/get/Downloads/Connector-C++/mysql-connector-c++-1.1.6-linux-glibc2.5-x86-32bit.rpm
+
+$sudo yum install mysql-connector-c++-1.1.6-linux-glibc2.5-x86-32bit.rpm
+```
 
 ## Build Instruction
 
@@ -25,13 +31,13 @@ $make
 
 ```
 [database]
-hostname=localhost : hostname that has image license database
-username=ccommons : username to connect db
-password= : password for the user
-schema=hashes : DB schema that contains following table
-table=IMG : Table name
-hashkey=id : Key field name
-hashvalue=phash : Hash value field name 
+hostname=localhost ; hostname that has image license database
+username=ccommons ; username to connect db
+password=testpassword ; password for the user
+schema=hashes ; DB schema that contains following table
+table=IMG ; Table name
+hashkey=id ; Key field name
+hashvalue=phash ; Hash value field name 
 ```
 
 ## Socket path
@@ -45,8 +51,13 @@ $mkdir /var/cc
 $chmod 777 /var/cc
 ```
 
+## Interface for request
+
+* See interface.md
+
 ## Run
 
-* number of cores should be used as a commandline argument  
-  ./regdaemon -c 4
-
+* number of cores should be set with -c flag
+```
+./regdaemon -c 4
+```
