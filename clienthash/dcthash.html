@@ -370,13 +370,14 @@
 				images.push(img);
 				hashes.push(phash + "+" + file.name + "+"+img.hash+ "+"+img.width+ "+"+img.height+"+"+hashold+"+"+hex);
 				console.log(hashes);
-
+				/*
 				var counter = 0;
 				for(x=0; x < img.width; x++){
 					for(y=0; y <img.height; y++){	
 						originals.push(x + "+" + y +"+"+ orig[x][y]);
 					}
 				}
+				*/
 			};//close onload
 
 			reader.readAsDataURL(file);
