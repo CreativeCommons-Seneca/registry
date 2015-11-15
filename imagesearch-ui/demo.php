@@ -9,8 +9,6 @@
   <link href="css/bootstrap.min.css" rel="stylesheet">
 </head>
 <style>
-
-
   .fileUpload {
     position: relative;
     overflow: hidden;
@@ -27,56 +25,77 @@
     opacity: 0;
     filter: alpha(opacity=0);
   }
-  
+  body {
+     overflow-x: hidden;
+  }
 </style>
+
 <body>
   <script src="phash.js"></script>
   <script type="text/javascript">
+    var storage;
+    var fail;
+    var uid;
+    try {
+      uid = new Date;
+      (storage = window.localStorage).setItem(uid, uid);
+      fail = storage.getItem(uid) != uid;
+      storage.removeItem(uid);
+      fail && (storage = false);
+    } catch (exception) {}
 
     oFReader = new FileReader(), oFReader2 = new FileReader(), rFilter = /^(?:image\/bmp|image\/cis\-cod|image\/gif|image\/ief|image\/jpeg|image\/jpeg|image\/jpeg|image\/pipeg|image\/png|image\/svg\+xml|image\/tiff|image\/x\-cmu\-raster|image\/x\-cmx|image\/x\-icon|image\/x\-portable\-anymap|image\/x\-portable\-bitmap|image\/x\-portable\-graymap|image\/x\-portable\-pixmap|image\/x\-rgb|image\/x\-xbitmap|image\/x\-xpixmap|image\/x\-xwindowdump)$/i;
 
     oFReader.onload = function (oFREvent) {
-
       var img=new Image();
       img.onload=function(){
-
-        $("#originalImg").width(225);
         document.getElementById("originalImg").src=img.src;
-        setCookie("src",img.src,1);
-
-
+        $("#originalImg").width(225);
       } // close img.onload
 
       img.src=oFREvent.target.result;
-
+      
+      try{
+        localStorage.orSource = img.src;
+      } catch(e) {
+        console.log("LIMIT reached!!!");
+      }
+     
       var canvas=document.createElement("canvas");
       var ctx=canvas.getContext("2d");
 
       console.log("original width, height");
       console.log(img.width, img.height);
+      console.log(img.src);
 
+
+
+      /*
       // Resize the image with canvas 
-      var ratio = img.width/img.height;
+      if(img.width > 1000){
+        console.log("MORE THAN!!");
+        var ratio = img.width/img.height;
+        canvas.width = 1000;
+        canvas.height = parseInt(1000/ratio);
+      }else{
+        canvas.width = img.width;
+        canvas.height = img.height;
+      }
+      */
 
-      if (img.width > 1000){
-      	console.log("width more than!");
-	      canvas.width = 1000;
-	      canvas.height = parseInt(1000/ratio);
-			}else{
-
-				console.log("image less than! w,h");
-				console.log(img.width, img.height);
-				canvas.width = img.width;
-				canvas.height = img.height;
-			}
+      // Do not resize
+      canvas.width = img.width;
+      canvas.height = img.height;
 
       ctx.drawImage(img,0,0,img.width,img.height,0,0,canvas.width,canvas.height);
       var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      
+      var src = canvas.toDataURL("image/jpeg");
+
+      console.log(getCookie("imageSource"));
+      console.log(src);
 
       $("#sub").prop('disabled', true);
-      $("#originalImg").css('border', "solid 2px white").css('box-shadow',"0 3px 3px -1px black");  
-
+  
       // Send image info to phash.js phash function
       var hash = phash(imageData, canvas.width, canvas.height);
       $("#status").html("Hash: "+hash + "</br> Checking for Matching Images...</br>");
@@ -100,44 +119,44 @@
         type: "post",
         success: function(php_script_response){
           var resp = JSON.parse(php_script_response);
-          console.log(resp.api);
-          console.log(resp.matches);
           if(resp.api.status == "ok"){
             if(resp.api.total > 0){
-              setCookie("searchresults", php_script_response,1);
+              setCookie("demosearchresults", php_script_response,1);
               $("#status").html("</br><b> Found " + resp.api.total+" matches </b></br>");
               // Build matches table
               var table = buildTable(resp);
               $('#imagematch').html(table);
             } else {
+              setCookie("demosearchresults", php_script_response,-1);
               $("#status").html("</br><b> No Matches Found in Database </b></br>");
               $('#imagematch').html("");
             }
           } else {
+            setCookie("demosearchresults", php_script_response,-1);
             $("#status").html("</br><b> Error: " + resp.api.errormessage+" matches </br>Error Code: "+resp.api.errorcode+"</b></br>");
             $('#imagematch').html("");
           }
         }// close success upon ajax call
       }); // close ajax call
       $("#sub").prop('disabled', false);
-
-    }
+      $("#fileToUpload").replaceWith($("#fileToUpload").clone());
+      $("#originalImg").css('border', "solid 2px white").css('box-shadow',"0 3px 3px -1px black");  
+    } // Close file reader onload
 
 function loadImageFile() {
 
-      setCookie("url", "no",1);
+  $("#myModal").modal('hide');
+  setCookie("demourl", "no",1);
 
+  // Set loading image
+  document.getElementById("originalImg").src="ajax-loader.gif";
+  $("#originalImg").width(16);
+  $("#originalImg").css('box-shadow','none');
 
   if (document.getElementById("fileToUpload").files.length === 0) { return; }
   var oFile = document.getElementById("fileToUpload").files[0];
-
   if (!rFilter.test(oFile.type)) { alert("You must select a valid image file!"); return; }
   oFReader.readAsDataURL(oFile);
-
-  //document.getElementById("originalImg").src="ajax-loader.gif";
-  $("#originalImg").width(16);
-  $("#originalImg").css('box-shadow','none');
-  document.getElementById("originalImg").src="ajax-loader.gif";
 
   $("#status").html("Hashing the Image...</br>");
   $('#imagematch').html("");
@@ -175,12 +194,8 @@ function sendURL() {
       success: function(php_script_response){
         $("#originalImg").css('border', "solid 2px white").css('box-shadow',"0 3px 3px -1px black");  
         document.getElementById("originalImg").src=orFile;
-       	$("#originalImg").width(225);
+        $("#originalImg").width(225);
         var resp = JSON.parse(php_script_response);
-
-        setCookie("url", "yes",1);
-        setCookie("file", "no",1);
-        setCookie("searchresults", php_script_response,1);
 
         console.log(resp.api.status);
         console.log(resp.matches);
@@ -188,15 +203,26 @@ function sendURL() {
           $("#status").html("</br><b> Found " + resp.api.total+" matches </b></br>");
           console.log(resp.matches);
           if(resp.api.total > 0){
+             setCookie("demourl", "yes",1);
+              setCookie("file", "no",1);
+              setCookie("demosearchresults", php_script_response,1);
+              setCookie("src", orFile);
+
             // Build matches table
             var table = buildTable(resp);
 
             $('#imagematch').html(table);
           }else{
+            setCookie("demosearchresults", php_script_response,-1);
             $('#imagematch').html("");
             $("#status").html("</br><b> No Matches Found in Database </b></br>");
+              setCookie("demourl", "yes",-1);
+              setCookie("file", "no",-1);
+              
+           
           }
         }else{
+          setCookie("demosearchresults", php_script_response,-1);
           $("#status").html("</br><b> Error: " + resp.api.errormessage+" matches </br>Error Code: "+resp.api.errorcode+"</b></br>");
           $('#imagematch').html("");
         }
@@ -206,8 +232,6 @@ function sendURL() {
         $("#fileToUpload").replaceWith($("#fileToUpload").clone());
       }// close success
     });
-
-	//$("#originalImg").width(225);
   }
 }
 
@@ -221,7 +245,7 @@ function buildTable(resp){
   for(x=0; x < resp.matches.length; x++){
     console.log(resp.matches[x]);
     var rows = $('<div style="text-align: center;  border: 2px solid #337ab7;  box-shadow: 0 3px 3px -1px black; margin: 5px; margin-bottom: 15px; background-color: white; vertical-align: middle;"></div>')
-                .html('<table><tr><td style="padding-left: 3px; text-align: left;"><a href="'+resp.matches[x].url+'" target="_blank"><img width="140" style="border: 2px solid white;" src="'+resp.matches[x].imageurl+'" </a></td><td style="padding-left: 10px; text-align: left;"><b><a href="'+resp.matches[x].url+'" target="_blank">Image URL Link</a></b></br>By: '+resp.matches[x].author+'</br>'+resp.matches[x].licenseLink+'</td></tr>');
+                .html('<table><tr><td style="padding-left: 3px; text-align: left;"><a href="'+resp.matches[x].url+'" ><img width="140" style="border: 2px solid white;" src="'+resp.matches[x].imageurl+'" </a></td><td style="padding-left: 10px; text-align: left;"><b><a href="'+resp.matches[x].url+'">Image URL Link</a></b></br>By: '+resp.matches[x].author+'</br>'+resp.matches[x].licenseLink+'</td></tr>');
     table.append(rows);
   }
   return table;
@@ -236,12 +260,12 @@ function buttonClick(){
   });
 }
 
-  function setCookie(cname, cvalue, exdays) {
-    var d = new Date();
-    d.setTime(d.getTime() + (exdays*24*60*60*1000));
-    var expires = "expires="+d.toUTCString();
-    document.cookie = cname + "=" + cvalue + "; " + expires;
-    //console.log(document.cookie);
+function setCookie(cname, cvalue, exdays) {
+  var d = new Date();
+  d.setTime(d.getTime() + (exdays*24*60*60*1000));
+  var expires = "expires="+d.toUTCString();
+  document.cookie = cname + "=" + cvalue + "; " + expires;
+  //console.log(document.cookie);
 }
 
 function getCookie(cname) {
@@ -267,12 +291,11 @@ function checkCookie() {
     }
 }
 
-
 // The Form
 </script>
 <?php include("navigate.php");
 activate($filen); ?>
-<div class="container">
+<div class="container-fluid">
   <h1 style="text-align: center;">Image Search and Licensing Tool</h1>
   <div class="col-xs-8 center-block" style="float:none; margin-bottom: 15px;">
     <form name="matches" method="post">
@@ -281,64 +304,127 @@ activate($filen); ?>
       </div>
     </div>
     <div class="col-xs-8 center-block" style="float:none; text-align: center;">  
-      <button id="sub" class="btn btn-primary" value="Search Image" onclick="sendURL()" name="submit" >Search Images By URL</button> 
-      <div class="fileUpload btn btn-primary">
-        <span>Search Local Images</span>
-        <input class="upload" type="file"  name="fileToUpload" id="fileToUpload" onchange="loadImageFile()";>
-      </div>
+       <button type="button" class="btn btn-info btn-med" data-toggle="modal" data-target="#myModal">Search URL Demo</button>
+       <button type="button" class="btn btn-info btn-med" data-toggle="modal" data-target="#myModal">Search Locally Demo</button> </br>
     </div>
   </form>
 
 </div>
-<div style="text-align: center; margin: 5px; margin-bottom: 15px; vertical-align: middle;"><img style="margin:auto;" id="originalImg"></img><p id="status"></p><div id="loader"></div></div>
+<div style="text-align: center; margin: 5px; margin-bottom: 15px; vertical-align: middle;"><img width="255" style="margin:auto;" id="originalImg"></img><p id="status"></p><div id="loader"></div></div>
 <div class="row" id="imagematch"></div>
 
 </div>
 </div>
+
+<!-- Modal -->
+<div class="modal fade" id="myModal" role="dialog">
+  <div class="modal-dialog">  
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Click on the Image to select the URL</h4>
+      </div>
+      <div class="modal-body">
+
+        <div class = "row" style="margin: 5px">
+          <div class="col-xs-3">
+            <img class="img-responsive" id="img1" onclick="modalUrl(this)" src="https://upload.wikimedia.org/wikipedia/commons/1/1f/Osaka_Motor_Show_2013_%28216%29_BMW_i8_Concept.JPG"></a>
+          </div>
+          <div class="col-xs-3">
+            <img class="img-responsive" id="img2" onclick="modalUrl(this)" src="https://upload.wikimedia.org/wikipedia/commons/2/29/Cez_motor_logo.jpg"></a>
+          </div>
+          <div class="col-xs-3">
+            <img class="img-responsive" id="img2" onclick="modalUrl(this)" src="https://upload.wikimedia.org/wikipedia/commons/d/d5/Rheintaler-schloss-falkenlust_35x35.jpg"></a>
+          </div>
+          <div class="col-xs-3">
+            <img class="img-responsive" id="img2" onclick="modalUrl(this)" src="https://upload.wikimedia.org/wikipedia/commons/e/e8/Drevnosti_RG_v3_ill145.jpg"></a>
+          </div>
+        </div>
+
+        <div class = "row" style="margin: 5px; margin-bottom: 17px">
+          <div class="col-xs-3">
+            <img class="img-responsive"  onclick="modalUrl(this)" src="https://farm8.staticflickr.com/7557/16193404871_04e2e0c031_o.jpg"></a>
+          </div>
+          <div class="col-xs-3">
+            <img class="img-responsive" onclick="modalUrl(this)" src="https://upload.wikimedia.org/wikipedia/commons/3/3b/Osaka_Motor_Show_2013_%2842%29_Renault_DeZir.JPG"></a>
+          </div>
+          <div class="col-xs-3">
+            <img class="img-responsive" onclick="modalUrl(this)" src="https://upload.wikimedia.org/wikipedia/commons/8/8f/Stamps_of_Ecuador%2C_2003-09.jpg"></a>
+          </div>
+          <div class="col-xs-3">
+            <img class="img-responsive"  onclick="modalUrl(this)" src="https://upload.wikimedia.org/wikipedia/commons/9/95/Stamps_of_Ecuador%2C_2003-56.jpg"></a>
+          </div>
+        </div>
+        <div>
+        </div>
+
+        <div class="modal-footer">
+
+
+         <div class="fileUpload btn btn-primary">
+          <span>Search Local Images</span>
+          <input class="upload" type="file"  name="fileToUpload" id="fileToUpload" onchange="loadImageFile()";>
+        </div>
+
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <script> 
-$('a[href="#"]').click(function () {
-  $(this).preventDefault();
-});
+  $('a[href="#"]').click(function () {
+    $(this).preventDefault();
+  });
 
-  var result = getCookie("searchresults");
-  var resultUrl = getCookie("url");
-  var tryit = getCookie("src");
+  // Modal onClick
+  function modalUrl(source){
+    console.log(source);
+    $("#myModal").modal('hide');
+    $("#url").val(source.src);
+    sendURL();
+  }
 
+  var result = getCookie("demosearchresults");
+  var resultUrl = getCookie("demourl");
+  var tryit = getCookie("imageSource");
   console.log(tryit);
 
   if(result == ""){
     console.log("NOTHING!!!");
   }else{
-    var respresult = JSON.parse(result);
-
-    console.log("HERE!!!====");
-    console.log(respresult);
-    console.log("===========");
-    $("#originalImg").css('border', "solid 2px white").css('box-shadow',"0 3px 3px -1px black"); 
-    document.getElementById("originalImg").src = respresult.matches[0].imageurl;
-    $("#originalImg").width(225);
     if(resultUrl == "yes"){
       console.log(resultUrl);
-      
+      var respresult = JSON.parse(result);
       console.log(respresult);
       var table = buildTable(respresult);
-
+      document.getElementById("originalImg").src = getCookie("src");
+      $("#originalImg").css('border', "solid 2px white").css('box-shadow',"0 3px 3px -1px black"); 
       $('#imagematch').html(table);
-
       console.log(result);
     } 
     if(resultUrl == "no"){
       console.log("***** FILE RESULT *******");
       console.log(result);
-      //document.getElementById("originalImg").src = getCookie("src");
-      console.log("***** FILE RESULT *******");
-      console.log(getCookie("src"));
-    
-      console.log(respresult);
-      var table = buildTable(respresult);
-      console.log(tryit);
-      $('#imagematch').html(table);
 
+      var respresult = JSON.parse(result);
+      var table = buildTable(respresult);
+
+      if(typeof(Storage) !== "undefined") {
+        if (localStorage.orSource) {
+          console.log("STORGE");
+          console.log(localStorage.orSource);
+          document.getElementById("originalImg").src=localStorage.orSource;
+          $("#originalImg").css('border', "solid 2px white").css('box-shadow',"0 3px 3px -1px black"); 
+        } else {
+          localStorage.orSource = img.src;
+        }
+      } else {
+      document.getElementById("result").innerHTML = "Sorry, your browser does not support web storage...";
+      }
+      $('#imagematch').html(table);
       //console.log(document.getElementById("fileToUpload").files[0]);
       //loadImageFile();
     }

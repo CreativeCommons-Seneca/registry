@@ -26,7 +26,7 @@
 
 #include "hashMatcher.h"
 
-#define SOCKET_PATH "/tmp/searcher.sock"
+#define SOCKET_PATH "/var/cc/searcher.sock"
 #define CONNECTION_QUEUE_SIZE 10
 
 /**

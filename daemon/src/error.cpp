@@ -48,7 +48,7 @@ const char* getErrorString(int errorId)
     }
 
     if(messageStructs[count].number == ERR_END)
-        printf("unknown error %d used\n", errorId);
+        printf("unknown error %d used\n", errorId);fflush(NULL);
 
     return messageStructs[count].text;
 }
@@ -58,7 +58,8 @@ const char* getErrorString(int errorId)
  */
 void printError(int errorId)
 {
-	char buf[256];
-	sprintf(buf, "ERROR [%d] %s", errorId, getErrorString(errorId));
-	perror(buf);
+    char buf[256];
+    sprintf(buf, "ERROR [%d] %s", errorId, getErrorString(errorId));
+    perror(buf);
+    fflush(NULL);
 }

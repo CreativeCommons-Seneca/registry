@@ -32,11 +32,12 @@
 #include "hashMatcher.h"
 #include "database.h"
 
-#define SOCKET_PATH "/tmp/cc.daemon.sock"
+#define SOCKET_DIR "/var/cc"
+#define SOCKET_PATH SOCKET_DIR"/ccregdaemon.sock"
 
 #define CONNECTION_QUEUE_SIZE 10
 
-#define RELEASE_VERSION "0.003"
+#define RELEASE_VERSION "0.004"
 
 /**
  * These hold all the data to compare against. They take up a lot of memory
@@ -125,11 +126,11 @@ void add(uint64_t hash, uint64_t dbId)
  * Used for remove function
  */
 struct matchid{
-	uint64_t id;
-	matchid(uint64_t dbId) : id(dbId){}
-	bool operator() (const Node &node){
-		return node.dbId == id;
-	}
+    uint64_t id;
+    matchid(uint64_t dbId) : id(dbId){}
+    bool operator() (const Node &node){
+        return node.dbId == id;
+    }
 };
 
 /**
@@ -137,11 +138,11 @@ struct matchid{
  */
 void remove(uint64_t dbId)
 {
-	bool removed = false;
-	for (unsigned i = 0; i < GBLnumCores - 1 && !removed; i++)
-	{
-		GBLnodeLists[i].remove_if(matchid(dbId));
-	}
+    bool removed = false;
+    for (unsigned i = 0; i < GBLnumCores - 1 && !removed; i++)
+    {
+        GBLnodeLists[i].remove_if(matchid(dbId));
+    }
 }
 
 /**
@@ -154,6 +155,7 @@ void printUsageAndExit()
            "Then connect to the socket %s and send a 'match' or 'add' command\n"
            "match hash_uint64_in_hex max_distance_uint8_in_decimal\n"
            "add dbId_uint64_in_decimal hash_uint64_in_hex\n", SOCKET_PATH);
+    fflush(NULL);
     exit(1);
 }
 
@@ -164,7 +166,7 @@ void printUsageAndExit()
  */
 std::vector<std::string> split(const char *str, char c = ' ')
 {
-	std::vector<std::string> result;
+    std::vector<std::string> result;
 
     do
     {
@@ -185,53 +187,53 @@ std::vector<std::string> split(const char *str, char c = ' ')
  * put name:value pairs to TCmdMap after decoding base64 encoded value
  */
 TCmdMap parseCommand(const char* command){
-	TCmdMap cmdMap;
+    TCmdMap cmdMap;
 
-	std::vector<std::string> fields;
-	std::vector<std::string> all = split(command, ' ');
-	std::vector<std::string>::iterator cur = all.begin();
+    std::vector<std::string> fields;
+    std::vector<std::string> all = split(command, ' ');
+    std::vector<std::string>::iterator cur = all.begin();
 
-	while(cur != all.end()){
+    while(cur != all.end()){
 
-		std::vector<std::string> internal = split(std::string(*cur).c_str() , ':');
+        std::vector<std::string> internal = split(std::string(*cur).c_str() , ':');
 
-		if (internal.size() == 2){
-			//std::cout << internal.at(0) << " : " << internal.at(1) << std::endl;
+        if (internal.size() == 2){
+            //std::cout << internal.at(0) << " : " << internal.at(1) << std::endl;
 
-			std::string value = internal.at(1);
+            std::string value = internal.at(1);
 
-			//decode base64.
-			int len = value.length();
-		    char *out = (char *)malloc(len); //this is ok. decoded size is always smaller.
-		    memset(out, 0x00, len);
-			base64::decoder D(len);
-			D.decode(value.c_str(), len, out);
+            //decode base64.
+            int len = value.length();
+            char *out = (char *)malloc(len); //this is ok. decoded size is always smaller.
+            memset(out, 0x00, len);
+            base64::decoder D(len);
+            D.decode(value.c_str(), len, out);
 
-			cmdMap.insert(TStrStrPair(internal.at(0), out));
+            cmdMap.insert(TStrStrPair(internal.at(0), out));
 
-			free(out);
-		}
+            free(out);
+        }
 
-		++cur;
-	}
+        ++cur;
+    }
 
-	/* log
-	TCmdMap::iterator p;
+    /* log
+    TCmdMap::iterator p;
 
-	for(p = cmdMap.begin(); p!=cmdMap.end(); ++p)
-	{
-		std::cout << p->first << " : ";
-		std::cout << p->second << std::endl;
-	}
-	*/
+    for(p = cmdMap.begin(); p!=cmdMap.end(); ++p)
+    {
+        std::cout << p->first << " : ";
+        std::cout << p->second << std::endl;
+    }
+    */
 
-	return cmdMap;
+    return cmdMap;
 }
 
 std::string intToString(int input){
-	std::stringstream out;
-	out << input;
-	return out.str();
+    std::stringstream out;
+    out << input;
+    return out.str();
 }
 
 /**
@@ -246,140 +248,140 @@ std::string intToString(int input){
  * 
  * Command format
  *  add : a name:base64(value)
- *  	name : author, name, etc..
+ *      name : author, name, etc..
  *  match : m name:base64(value)
- *  	name : match
+ *      name : match
  *  delete : d name:base64(value)
- *  	name : id
+ *      name : id
  *
  * Return format
  *  add
- *  	success : 0,id
- *  	error : errorcode,errordesc
+ *      success : 0,id
+ *      error : errorcode,errordesc
  *  match
- *		success : 0,number,matched ids
- *		error : errorcode,errordesc
- *	delete
- *		success : 0
- *		error : errorcode,errordesc
+ *        success : 0,number,matched ids
+ *        error : errorcode,errordesc
+ *    delete
+ *        success : 0
+ *        error : errorcode,errordesc
  */
 void processCommand(int socket, const char* command)
 {
     if (!command || !*command)
-    	return;
+        return;
 
-	TCmdMap cmdMap = parseCommand(command);
+    TCmdMap cmdMap = parseCommand(command);
 
-	std::string response;
+    std::string response;
 
-	switch (*command){
+    switch (*command){
     case 'a':
-    	std::cout << "ADD" << std::endl;
-    	//if seccess get added id and hash
-		{
-			//check mendatory parameters
-			auto search = cmdMap.find("phash");
-			if(search == cmdMap.end() || search->second.length() == 0){
-				printError(ERR_DAEMON_INVALID_REQUEST);
-				response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
-			}
-			else{
-				uint64_t id = 0;
-				RCODE rCode;
-				try{
-					if (RCODE_SUCCESSED(rCode = addNewContent(cmdMap, &id))){
-						std::string strHash = search->second;
-						uint64_t uiHash = std::stoull(strHash);
+        std::cout << "ADD" << std::endl;
+        //if seccess get added id and hash
+        {
+            //check mendatory parameters
+            auto search = cmdMap.find("phash");
+            if(search == cmdMap.end() || search->second.length() == 0){
+                printError(ERR_DAEMON_INVALID_REQUEST);
+                response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
+            }
+            else{
+                uint64_t id = 0;
+                RCODE rCode;
+                try{
+                    if (RCODE_SUCCESSED(rCode = addNewContent(cmdMap, &id))){
+                        std::string strHash = search->second;
+                        uint64_t uiHash = std::stoull(strHash);
 
-						add(uiHash, id);
-						response = "0," + intToString(id);
-					}
-					else{
-						response = intToString(rCode);
-						std::string errorstring = getLastDBErrorString();
-						if (errorstring.length() > 0){
-							response += "," + errorstring;
-						}
-					}
-				}catch(std::exception &e){
-					std::cerr << "# ERR: " << e.what();
-					response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
-				}
-			}
-		}
+                        add(uiHash, id);
+                        response = "0," + intToString(id);
+                    }
+                    else{
+                        response = intToString(rCode);
+                        std::string errorstring = getLastDBErrorString();
+                        if (errorstring.length() > 0){
+                            response += "," + errorstring;
+                        }
+                    }
+                }catch(std::exception &e){
+                    std::cerr << "# ERR: " << e.what() << std::endl;
+                    response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
+                }
+            }
+        }
 
-    	break;
+        break;
     case 'm':
-		{
-			auto search = cmdMap.find("hash");
-			if(search == cmdMap.end()){
-				printError(ERR_DAEMON_INVALID_REQUEST);
-				response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
-			}
-			else{
-				try{
-					std::string strHash = search->second;
+        {
+            auto search = cmdMap.find("hash");
+            if(search == cmdMap.end()){
+                printError(ERR_DAEMON_INVALID_REQUEST);
+                response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
+            }
+            else{
+                try{
+                    std::string strHash = search->second;
+                    std::cerr << strHash << std::endl;
+                    uint64_t uiHash = std::stoull(strHash);
+                    ::search(uiHash, 4);
+                    response = "0,";
+                    response += intToString(GBLsearchResults.size());
 
-					uint64_t uiHash = std::stoull(strHash);
-					::search(uiHash, 4);
-					response = "0,";
-					response += intToString(GBLsearchResults.size());
+                    for (unsigned i = 0; i < GBLsearchResults.size(); i++)
+                    {
+                        response += "," + intToString(GBLsearchResults[i].dbId);
+                    }
+                }catch(std::exception &e){
+                    std::cerr << "# ERR: " << e.what() << std::endl;
+                    response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + ": " + e.what();
+                }
+            }
+        }
 
-					for (unsigned i = 0; i < GBLsearchResults.size(); i++)
-					{
-						response += "," + intToString(GBLsearchResults[i].dbId);
-					}
-				}catch(std::exception &e){
-					std::cerr << "# ERR: " << e.what();
-					response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
-				}
-			}
-		}
-
-    	break;
+        break;
     case 'd':
-		{
-			//check mendatory parameters
-			auto search = cmdMap.find("id");
-			if(search == cmdMap.end()){
-				printError(ERR_DAEMON_INVALID_REQUEST);
-				response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
-			}
-			else{
-				RCODE rCode;
-				try{
-					if (RCODE_SUCCESSED(rCode = markDeleted(cmdMap))){
-						uint64_t uiHash = std::stoull(cmdMap["id"]);
-						remove(uiHash);
-						//delete from memory
-						response = "0,";
-					}
-					else{
-						response = intToString(rCode);
-						std::string errorstring = getLastDBErrorString();
-						if (errorstring.length() > 0){
-							response += "," + errorstring;
-						}
-					}
-				}catch(std::exception &e){
-					std::cerr << "# ERR: " << e.what();
-					response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
-				}
-			}
-		}
+        {
+            //check mendatory parameters
+            auto search = cmdMap.find("id");
+            if(search == cmdMap.end()){
+                printError(ERR_DAEMON_INVALID_REQUEST);
+                response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT;
+            }
+            else{
+                RCODE rCode;
+                try{
+                    if (RCODE_SUCCESSED(rCode = markDeleted(cmdMap))){
+                        uint64_t uiHash = std::stoull(cmdMap["id"]);
+                        remove(uiHash);
+                        //delete from memory
+                        response = "0,";
+                    }
+                    else{
+                        response = intToString(rCode);
+                        std::string errorstring = getLastDBErrorString();
+                        if (errorstring.length() > 0){
+                            response += "," + errorstring;
+                        }
+                    }
+                }catch(std::exception &e){
+                    std::cerr << "# ERR: " << e.what() << std::endl;
+                    response = intToString(ERR_DAEMON_INVALID_REQUEST) + "," + ERR_DAEMON_INVALID_REQUEST_TEXT + " : " + e.what();
+                }
+            }
+        }
 
-    	break;
+        break;
     }
 
-	std::cout << "Response : " << response << std::endl;
+    std::cout << "Response : " << response << std::endl;
 
-	unsigned responseLen = response.length(), numBytesSent;
-	numBytesSent = send(socket, response.c_str(), response.length(), MSG_NOSIGNAL);
+    unsigned responseLen = response.length(), numBytesSent;
+    numBytesSent = send(socket, response.c_str(), response.length(), MSG_NOSIGNAL);
 
-	if (numBytesSent != responseLen)
-		perror("Couldn't send response to client\n");
+    if (numBytesSent != responseLen)
+        perror("Couldn't send response to client\n");
 
-	std::cout << "Sent" << std::endl;
+    std::cout << "Sent" << std::endl;
 }
 
 /**
@@ -401,7 +403,7 @@ void readCommands(int socket)
             break; // connection closed
         if (rc == -1)
         {
-        	printError(ERR_DAEMON_READING_COMMAND);
+            printError(ERR_DAEMON_READING_COMMAND);
             break;
         }
         numBytesFilled += rc;
@@ -423,6 +425,7 @@ void readCommands(int socket)
         if (numBytesFilled == bufferSize)
         {
             fprintf(stderr, "Command too long, closing connection.\n");
+            fflush(NULL);
             break;
         }
     }
@@ -451,6 +454,7 @@ void search(uint64_t hash, unsigned char maxDistance)
         if (rc != 0)
         {
             printf("Error: pthread_create() returned %d\n", rc);
+            fflush(NULL);
             exit(2);
         }
     }
@@ -475,6 +479,7 @@ void* searchThread(void* threadParam)
     
     //printf("Thread number %d is now working\n", 
              //((ThreadParam*)threadParam)->threadNum);fflush(NULL);
+    //fflush(NULL);
     
     // BEGIN PERFORMANCE-CRITICAL SECTION
     for (std::forward_list<Node>::iterator it = nodeList->begin(); 
@@ -488,6 +493,7 @@ void* searchThread(void* threadParam)
         {
             printf("Ditance %d between 0x%lX and 0x%lX (bits 0x%lX)\n",
                    distance, queryHash, it->pHash, bitsToCount);
+            fflush(NULL);
             
             pthread_mutex_lock(&GBLsearchResultsMutex);
             GBLsearchResults.emplace_back(it->dbId, distance);
@@ -499,6 +505,7 @@ void* searchThread(void* threadParam)
     
     //printf("Thread number %d is done\n", 
             //((ThreadParam*)threadParam)->threadNum);fflush(NULL);
+    //fflush(NULL);
     
     pthread_exit(NULL);
 }
@@ -539,15 +546,16 @@ int main(int argc, char** argv)
         GBLnodeListSizes[i] = 0;
 
     //load from database
-	printf("Loading Database Started\n");
-	int count = 0;
-	RCODE rCode = addFromDatabase(add, &count);
-	if (RCODE_FAILED(rCode)){
-		printError(rCode);
-		perror(getLastDBErrorString().c_str());
-	}
-	//int count = addFromDatabase(add);
-	printf("Loading Database Finished %d hash added\n", count);
+    printf("Loading Database Started\n");fflush(NULL);
+    int count = 0;
+    RCODE rCode = addFromDatabase(add, &count);
+    if (RCODE_FAILED(rCode)){
+        printError(rCode);
+        perror(getLastDBErrorString().c_str());fflush(NULL);
+    }
+    //int count = addFromDatabase(add);
+    printf("Loading Database Finished %d hash added\n", count);
+    fflush(NULL);
 
     // Allocate the array of threads for searching, one thread per core
     GBLsearchThreads = new pthread_t[GBLnumCores];
@@ -557,9 +565,10 @@ int main(int argc, char** argv)
     //int numNodes = 100000000;
     //for (int i = 0; i < numNodes; i++)
         //add(i, random());
-    //printf("Loaded:\n");
+    //printf("Loaded:\n");fflush(NULL);
     //for (unsigned i = 0; i < GBLnumCores; i++)
         //printf("  List %d: %d nodes\n", i, GBLnodeListSizes[i]);
+    //fflush(NULL);
     
     //// Do a thousand searches for performance testing
     //int numSearches = 10;
@@ -570,6 +579,15 @@ int main(int argc, char** argv)
     //gettimeofday(&tv2, NULL);
     //printf("%d searches took %ld.%03ld seconds\n", numSearches,
            //tv2.tv_sec - tv1.tv_sec, tv2.tv_usec - tv1.tv_usec);
+    //fflush(NULL);
+    
+    // Make sure the directory exists
+    rc = mkdir(SOCKET_DIR, 0755);
+    if (rc != 0 && errno != EEXIST)
+    {
+        printError(ERR_DAEMON_CREATE_SOCKET_DIR);
+        exit(3);
+    }
     
     // BEGIN set up listening socket
     int listeningSocket;
@@ -579,7 +597,7 @@ int main(int argc, char** argv)
     listeningSocket = socket(AF_UNIX, SOCK_STREAM, 0);
     if (listeningSocket == -1)
     {
-    	printError(ERR_DAEMON_CREATE_SOCKET);
+        printError(ERR_DAEMON_CREATE_SOCKET);
         exit(3);
     }
     
@@ -590,19 +608,19 @@ int main(int argc, char** argv)
     rc = bind(listeningSocket, (struct sockaddr *)&listeningAddr, len);
     if (rc == -1)
     {
-    	printError(ERR_DAEMON_BIND_SOCKET);
+        printError(ERR_DAEMON_BIND_SOCKET);
         exit(4);
     }
     
     //php cannot access without changing permission
     if (chmod(SOCKET_PATH, 0666) < 0){
-    	printError(ERR_DAEMON_SOCKET_PERMISSION);
+        printError(ERR_DAEMON_SOCKET_PERMISSION);
     }
 
     rc = listen(listeningSocket, CONNECTION_QUEUE_SIZE);
     if (rc == -1)
     {
-    	printError(ERR_DAEMON_SOCKET_LISTEN);
+        printError(ERR_DAEMON_SOCKET_LISTEN);
         exit(5);
     }
     // END set up listening socket
@@ -614,16 +632,17 @@ int main(int argc, char** argv)
         struct sockaddr_un remoteAddr;
         socklen_t remoteAddrLen;
         
-        printf("Waiting for a connection.\n");
+        printf("Waiting for a connection.\n");fflush(NULL);
         remoteAddrLen = sizeof(remoteAddr);
         acceptedSocket = accept(listeningSocket, 
                                 (struct sockaddr *)&remoteAddr, &remoteAddrLen);
         if (acceptedSocket == -1)
             continue;
         printf("Connection established, waiting for commands.\n");
+        fflush(NULL);
         
         readCommands(acceptedSocket);
-        printf("Connection closed.\n");
+        printf("Connection closed.\n");fflush(NULL);
         close(acceptedSocket);
     }
     

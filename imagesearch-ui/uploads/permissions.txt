@@ -1,0 +1,2 @@
+This directory needs to have write permissions for apache.
+

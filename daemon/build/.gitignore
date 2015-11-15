@@ -1,0 +1,6 @@
+regdaemon
+src/*.d
+src/*.o
+src/*/*.d
+src/*/*.o
+

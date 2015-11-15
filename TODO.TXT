@@ -1,0 +1,5 @@
+Clean up build system in daemon.
+Rename daemon directory to ccregdaemon
+Remove regdaemon.cpp
+Rename hashMatcher.cpp to ccregdaemon.cpp
+Tabs to spaces everywhere
