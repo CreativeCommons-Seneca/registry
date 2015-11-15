@@ -5,3 +5,6 @@ Description=CC Registry quick search daemon
 WorkingDirectory=/home/ccommons/daemon/build/
 ExecStart=/home/ccommons/daemon/build/regdaemon -c 8
 
+[Install]
+WantedBy=multi-user.target
+

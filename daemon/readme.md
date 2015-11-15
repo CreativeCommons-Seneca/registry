@@ -61,3 +61,12 @@ $chmod 777 /var/cc
 ```
 ./regdaemon -c 4
 ```
+
+## Run automatically on boot
+
+To run the service automatically on boot you can copy the file regdaemon.service to /etc/systemd/system/regdaemon.service, then enable and start it like this:
+```
+systemctl start regdaemon.service
+systemctl enable regdaemon.service
+```
+

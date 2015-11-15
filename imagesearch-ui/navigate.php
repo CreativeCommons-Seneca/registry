@@ -1,4 +1,3 @@
-
 <?php
 function activate($filename){
   $file = basename($filename, ".php");
@@ -25,21 +24,12 @@ function activate($filename){
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul id="navigate" class="nav navbar-nav">
         <li id="CreativeCommons"><a href="http://creativecommons.com" >Creative Commons</a></li>
-        
-        <li id="Search"><a href="index.php">Image Search</a></li>
-        <li id="Demo"><a href="demo.php">Demo Image Search</a></li>
+        <!--li id="Demo"><a href="demo.php">Demo Image Search</a></li-->
         <li id="About"><a href="about.php">About</a></li>
-        <li id="API"><a href="api.php">API</a></li>
-
+        <!--li id="API"><a href="api.php">API</a></li-->
       </ul>
-
     </div><!-- /.navbar-collapse -->
   </div><!-- /.container-fluid -->
 </nav>
- <script>
-
-
-
-  </script>
 <?php
 }?>
