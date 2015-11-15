@@ -25,7 +25,7 @@ activate($filen); ?>
     <p>This tool was developed at the <a href="https://cdot.senecacollege.ca/">Seneca Centre for Development of Open Technologies (CDOT)</a>. A quick overview of the project is in these three posts:</p>
     <ul>
       <li><a href="http://littlesvr.ca/grumble/2015/11/14/cc-registry-what-its-all-about/">CC Registry – What it’s all about</a></li>
-      <li><a href="http://littlesvr.ca/grumble/2015/11/14/cc-registry-architecture/">CC Registry – Architecture</a></li>
+      <li><a href="http://littlesvr.ca/grumble/2015/11/14/cc-registry-architecture/"></a>CC Registry – Architecture</li>
       <li><a href="http://littlesvr.ca/grumble/2015/11/14/cc-registry-next-steps/">CC Registry – Next steps</a></li>
     </ul>
     <p>If you're interested in more details, the two main developers working on the project kept notes on their blogs: <a href="https://hosunghwang.wordpress.com/category/cdot/creative-commons/">Hosung Hwang</a> and <a href="http://annafatsevych.com/blog/category/cdot/creative-commons-cdot/">Anna Fatsevych</a>.</p>
