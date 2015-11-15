@@ -4,7 +4,7 @@
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CC Image Search </title>
+  <title>CC Image Search</title>
   <!-- StyleSheets-->
   <link href="css/bootstrap.min.css" rel="stylesheet">
 </head>
@@ -275,21 +275,25 @@ activate($filen); ?>
 <div class="container">
   <h1 style="text-align: center;">Image Search and Licensing Tool</h1>
   <div class="col-xs-8 center-block" style="float:none; margin-bottom: 15px;">
+    <p>This search tool will allow you easily find author and licence information for freely licenced (Creative Commons) images.</p>
+    </p>The website you're currently on is only a demonstration. The server has over a million image hashes but there are hundreds of millions of freely-licenced images out there so please <a href="imageurls.php">pick an image from the following list</a> to see what the fully functioning service would look like.</p>
+  </div>
+  <div class="col-xs-8 center-block" style="float:none; margin-bottom: 15px;">
     <form name="matches" method="post">
       <div class="form-group">
         <input type="text" name="url" class="form-control" id="url" onchange="sendURL()" placeholder="Enter Image URL">
       </div>
     </div>
     <div class="col-xs-8 center-block" style="float:none; text-align: center;">  
-      <button id="sub" class="btn btn-primary" value="Search Image" onclick="sendURL()" name="submit" >Search Images By URL</button> 
-      <div class="fileUpload btn btn-primary">
+      <button id="sub" class="btn btn-primary" value="Search Image" onclick="sendURL()" name="submit" >Find Licence Info</button> 
+      <!--div class="fileUpload btn btn-primary">
         <span>Search Local Images</span>
         <input class="upload" type="file"  name="fileToUpload" id="fileToUpload" onchange="loadImageFile()";>
-      </div>
+      </div-->
     </div>
   </form>
-
 </div>
+
 <div style="text-align: center; margin: 5px; margin-bottom: 15px; vertical-align: middle;"><img style="margin:auto;" id="originalImg"></img><p id="status"></p><div id="loader"></div></div>
 <div class="row" id="imagematch"></div>
 
